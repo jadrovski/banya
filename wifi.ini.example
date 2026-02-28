@@ -1,0 +1,7 @@
+; WiFi Configuration File (EXAMPLE)
+; Copy this file to wifi.ini and fill in your actual credentials
+; IMPORTANT: wifi.ini is gitignored - never commit real credentials!
+
+[env:esp32doit-devkit-v1]
+WIFI_SSID = "your_wifi_ssid"
+WIFI_PASSWORD = "your_wifi_password"
