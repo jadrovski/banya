@@ -9,27 +9,20 @@
 namespace HAL {
 
 /**
- * @brief Максимальное количество сенсоров DS18B20
- */
-constexpr uint8_t MAX_DS18B20_SENSORS = 8;
-
-/**
  * @brief Конфигурация DS18B20
  */
 struct DS18B20Config {
     uint8_t dataPin;                // GPIO пин данных (по умолчанию 5)
-    uint8_t maxSensors;             // Максимум сенсоров (по умолчанию 2)
     uint8_t resolution;             // Разрешение 9-12 бит (по умолчанию 12)
     bool waitForConversion;         // Ждать конвертацию (по умолчанию false)
     unsigned long updateInterval;   // Интервал обновления температур (по умолчанию 2000мс)
 
     DS18B20Config(
         uint8_t pin = 5,
-        uint8_t max = 2,
         uint8_t res = 12,
         bool wait = false,
         unsigned long interval = 2000
-    ) : dataPin(pin), maxSensors(max), resolution(res), waitForConversion(wait), updateInterval(interval) {}
+    ) : dataPin(pin), resolution(res), waitForConversion(wait), updateInterval(interval) {}
 };
 
 /**
@@ -50,9 +43,9 @@ struct DS18B20SensorData {
 
 /**
  * @brief Hardware Access Layer для сенсоров DS18B20
- * 
+ *
  * Поддерживает:
- * - До 8 сенсоров на одной шине
+ * - Неограниченное количество сенсоров на одной шине (ограничено памятью ESP32)
  * - Индивидуальное адресование по уникальному 64-битному адресу
  * - Разрешение 9-12 бит
  * - Асинхронное чтение температур
@@ -62,7 +55,7 @@ private:
     DS18B20Config config;
     OneWire* oneWire;
     DallasTemperature* sensors;
-    DS18B20SensorData sensorData[MAX_DS18B20_SENSORS];
+    DS18B20SensorData* sensorData;  // Динамический массив
     uint8_t sensorCount;
     unsigned long lastRequestTime;
     bool conversionComplete;
@@ -78,18 +71,15 @@ public:
         : config(cfg),
           oneWire(nullptr),
           sensors(nullptr),
+          sensorData(nullptr),
           sensorCount(0),
           lastRequestTime(0),
           conversionComplete(false),
           lastUpdateTime(0),
-          conversionInProgress(false) {
-        for (uint8_t i = 0; i < MAX_DS18B20_SENSORS; i++) {
-            sensorData[i].index = i;
-            sensorData[i].connected = false;
-        }
-    }
+          conversionInProgress(false) {}
 
     ~DS18B20Manager() {
+        if (sensorData) delete[] sensorData;
         if (sensors) delete sensors;
         if (oneWire) delete oneWire;
     }
@@ -106,18 +96,19 @@ public:
         // Отключаем ожидание конвертации для асинхронной работы
         sensors->setWaitForConversion(config.waitForConversion);
 
-        // Поиск и регистрация сенсоров
+        // Получение количества сенсоров и выделение памяти
         sensorCount = sensors->getDeviceCount();
-        if (sensorCount > config.maxSensors) {
-            sensorCount = config.maxSensors;
-        }
-
-        for (uint8_t i = 0; i < sensorCount; i++) {
-            sensors->getAddress(sensorData[i].address, i);
-            sensors->setResolution(sensorData[i].address, config.resolution);
-            sensorData[i].resolution = config.resolution;
-            sensorData[i].connected = true;
-            sensorData[i].index = i;
+        if (sensorCount > 0) {
+            sensorData = new DS18B20SensorData[sensorCount];
+            
+            // Инициализация данных сенсоров
+            for (uint8_t i = 0; i < sensorCount; i++) {
+                sensors->getAddress(sensorData[i].address, i);
+                sensors->setResolution(sensorData[i].address, config.resolution);
+                sensorData[i].resolution = config.resolution;
+                sensorData[i].connected = true;
+                sensorData[i].index = i;
+            }
         }
 
         // Первичное чтение
@@ -285,10 +276,8 @@ public:
     String getInfo() const {
         String info = "DS18B20 Manager (Pin:";
         info += config.dataPin;
-        info += ") Sensors:";
+        info += ") Sensors: ";
         info += sensorCount;
-        info += "/";
-        info += config.maxSensors;
 
         for (uint8_t i = 0; i < sensorCount; i++) {
             info += " [";
