@@ -8,7 +8,7 @@ namespace HAL {
 
 /**
  * @brief Страница отображения температур DS18B20
- * 
+ *
  * DS18B20Manager автоматически обновляет температуры в фоне.
  * Страница только отображает текущие значения.
  */
@@ -17,16 +17,21 @@ private:
     DS18B20Manager* dsManager;
     float lastTemp1;
     float lastTemp2;
+    unsigned long lastUpdate;
+    const unsigned long updateInterval;
 
 public:
-    DallasSensorsPage(DS18B20Manager* ds, const String& title = "Dallas Sensors")
+    DallasSensorsPage(DS18B20Manager* ds, const String& title = "Dallas Sensors", unsigned long interval = 1000)
         : DisplayPage(title, 0),
           dsManager(ds),
           lastTemp1(-127),
-          lastTemp2(-127) {}
+          lastTemp2(-127),
+          lastUpdate(0),
+          updateInterval(interval) {}
 
     void onEnter() override {
         DisplayPage::onEnter();
+        lastUpdate = 0;
         lastTemp1 = -127;
         lastTemp2 = -127;
     }
@@ -39,52 +44,35 @@ public:
 
 private:
     void updateDisplay(LCD& lcd, bool force) {
+        unsigned long now = millis();
+        bool needUpdate = force || (now - lastUpdate >= updateInterval);
+
+        if (!needUpdate) return;
+        lastUpdate = now;
+
         // Заголовок
-        lcd.setCursor(0, 0);
-        lcd.print(title);
-        lcd.print("          ");
+        lcd.line_printf(0, "%s", title.c_str());
 
         // Сенсор 1
         float temp1 = dsManager->getTemperature(0);
         if (dsManager->isConnected(0) && temp1 != DEVICE_DISCONNECTED_C) {
-            lcd.setCursor(0, 1);
-            lcd.print("T1: ");
-            lcd.print(temp1, 1);
-            lcd.print("C ");
-            if (force && temp1 != lastTemp1) {
-                lcd.print(">");
-            } else {
-                lcd.print(" ");
-            }
+            lcd.line_printf(1, "T1: %.1f C", temp1);
             lastTemp1 = temp1;
         } else {
-            lcd.setCursor(0, 1);
-            lcd.print("T1: --.- C      ");
+            lcd.line_printf(1, "T1: --.- C");
         }
 
         // Сенсор 2
         float temp2 = dsManager->getTemperature(1);
         if (dsManager->isConnected(1) && temp2 != DEVICE_DISCONNECTED_C) {
-            lcd.setCursor(0, 2);
-            lcd.print("T2: ");
-            lcd.print(temp2, 1);
-            lcd.print("C ");
-            if (force && temp2 != lastTemp2) {
-                lcd.print(">");
-            } else {
-                lcd.print(" ");
-            }
+            lcd.line_printf(2, "T2: %.1f C", temp2);
             lastTemp2 = temp2;
         } else {
-            lcd.setCursor(0, 2);
-            lcd.print("T2: --.- C      ");
+            lcd.line_printf(2, "T2: --.- C");
         }
 
         // Статус
-        lcd.setCursor(0, 3);
-        lcd.print("Sensors: ");
-        lcd.print(dsManager->getSensorCount());
-        lcd.print(" found ");
+        lcd.line_printf(3, "Sensors: %d found", dsManager->getSensorCount());
     }
 };
 
