@@ -10,14 +10,14 @@ namespace HAL {
      */
     struct TouchConfig {
         touch_pad_t touchPin; // Touch пин (T0-T9)
-        uint16_t threshold; // Порог срабатывания
+        float thresholdPercent; // Порог срабатывания (0.0-1.0, процент от baseline)
         uint32_t debounceMs; // Время подавления дребезга (мс)
 
         TouchConfig(
             touch_pad_t pin = TOUCH_PAD_NUM4, // T4 = GPIO4
-            uint16_t thresh = 50,
+            float threshPercent = 0.9f,
             uint32_t debounce = 200
-        ) : touchPin(pin), threshold(thresh), debounceMs(debounce) {
+        ) : touchPin(pin), thresholdPercent(threshPercent), debounceMs(debounce) {
         }
     };
 
@@ -66,6 +66,7 @@ namespace HAL {
         unsigned long lastDebounceTime;
         uint32_t touchCount;
         uint16_t baselineValue;
+        uint16_t currentThreshold; // Calculated threshold from baseline * percentage
 
     public:
         /**
@@ -93,8 +94,8 @@ namespace HAL {
                 return false;
             }
 
-            // Настройка конкретного пина
-            ret = touch_pad_config(config.touchPin, config.threshold);
+            // Настройка конкретного пина (временный порог, будет обновлен после калибровки)
+            ret = touch_pad_config(config.touchPin, 0);
             if (ret != ESP_OK) {
                 Serial.println("Touch: Config failed");
                 return false;
@@ -129,12 +130,18 @@ namespace HAL {
             }
 
             baselineValue = sum / samples;
+            // Calculate threshold from percentage
+            currentThreshold = (uint16_t)(baselineValue * config.thresholdPercent);
+            
             Serial.print("Touch: Baseline = ");
             Serial.println(baselineValue);
-            Serial.print("Touch: Current value = ");
-            uint16_t current;
-            touch_pad_read(config.touchPin, &current);
-            Serial.println(current);
+            Serial.print("Touch: Threshold = ");
+            Serial.println(currentThreshold);
+            Serial.print("Touch: Threshold % = ");
+            Serial.println(config.thresholdPercent, 2);
+            
+            // Apply calculated threshold to hardware
+            touch_pad_set_thresh(config.touchPin, currentThreshold);
         }
 
         /**
@@ -157,7 +164,11 @@ namespace HAL {
             uint16_t value = read();
 
             // Touch работает инвертировано: меньше = касание
-            bool touched = value < config.threshold;
+            bool touched = value < currentThreshold;
+
+            if (touched) {
+                Serial.println(getInfo());
+            }
 
             unsigned long currentTime = millis();
 
@@ -269,18 +280,27 @@ namespace HAL {
         uint16_t getBaselineValue() const { return baselineValue; }
 
         /**
-         * @brief Установить порог срабатывания
-         * @param threshold Порог (0-65535)
+         * @brief Установить порог срабатывания (в процентах от baseline)
+         * @param thresholdPercent Порог (0.0-1.0)
          */
-        void setThreshold(uint16_t threshold) {
-            config.threshold = threshold;
-            touch_pad_set_thresh(config.touchPin, threshold);
+        void setThreshold(float thresholdPercent) {
+            config.thresholdPercent = constrain(thresholdPercent, 0.0f, 1.0f);
+            // Recalculate threshold based on current baseline
+            currentThreshold = (uint16_t)(baselineValue * config.thresholdPercent);
+            touch_pad_set_thresh(config.touchPin, currentThreshold);
         }
 
         /**
-         * @brief Получить текущий порог
+         * @brief Получить текущий порог в процентах
+         * @return Процентное значение (0.0-1.0)
          */
-        uint16_t getThreshold() const { return config.threshold; }
+        float getThresholdPercent() const { return config.thresholdPercent; }
+
+        /**
+         * @brief Получить текущий порог в абсолютном значении
+         * @return Абсолютное значение порога
+         */
+        uint16_t getThreshold() const { return currentThreshold; }
 
         /**
          * @brief Проверка статуса инициализации
@@ -299,8 +319,10 @@ namespace HAL {
             info += " (base:";
             info += baselineValue;
             info += ") | Thresh: ";
-            info += config.threshold;
-            info += " | Touches: ";
+            info += currentThreshold;
+            info += " (";
+            info += (config.thresholdPercent * 100.0f);
+            info += "%) | Touches: ";
             info += touchCount;
 
             if (lastTouchState) {

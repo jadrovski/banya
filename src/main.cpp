@@ -42,7 +42,8 @@ constexpr uint8_t LEDC_CHANNEL_B = 2;
 #endif
 
 constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM3; // Touch конфигурация (используем T3 = GPIO15)
-constexpr uint16_t TOUCH_THRESHOLD = 500; // Порог срабатывания тача
+constexpr float TOUCH_THRESHOLD_PERCENT = 0.9f; // Порог срабатывания тача (90% от baseline)
+constexpr uint32_t TOUCH_DEBOUNCE_MS = 50;
 
 // ============================================================================
 // Глобальные объекты HAL
@@ -69,7 +70,7 @@ HAL::WiFiManager wifi(wifiConfig);
 HAL::SaunaWebServer webServer;
 
 // Touch сенсор
-HAL::TouchConfig touchConfig(TOUCH_PIN, TOUCH_THRESHOLD, 50);
+HAL::TouchConfig touchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS);
 HAL::TouchSensor touch(touchConfig);
 
 // Менеджер страниц
