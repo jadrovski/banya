@@ -15,7 +15,10 @@ private:
     float lastTemp1;
     float lastTemp2;
     unsigned long lastUpdate;
+    unsigned long conversionStartTime;
     const unsigned long updateInterval;
+    const unsigned long conversionTimeout;
+    bool conversionInProgress;
 
 public:
     DallasSensorsPage(DS18B20Manager* ds, const String& title = "Dallas Sensors")
@@ -24,29 +27,59 @@ public:
           lastTemp1(-127),
           lastTemp2(-127),
           lastUpdate(0),
-          updateInterval(1000) {}
+          conversionStartTime(0),
+          updateInterval(1000),
+          conversionTimeout(1000), // Максимум 1 секунда на конвертацию
+          conversionInProgress(false) {}
 
     void onEnter() override {
         DisplayPage::onEnter();
-        lastUpdate = 0; // Принудительное обновление при входе
+        lastUpdate = 0;
+        conversionInProgress = false;
+        lastTemp1 = -127;
+        lastTemp2 = -127;
     }
 
     void render(LCD& lcd, bool force = false) override {
         if (!dsManager) return;
 
         unsigned long now = millis();
+        
+        // Если конвертация в процессе, проверяем готовность
+        if (conversionInProgress) {
+            if (dsManager->isConversionComplete()) {
+                dsManager->updateTemperatures();
+                conversionInProgress = false;
+                // Обновляем дисплей сразу после получения данных
+                updateDisplay(lcd, true);
+                lastUpdate = now;
+                return;
+            }
+            // Таймаут конвертации
+            if (now - conversionStartTime > conversionTimeout) {
+                conversionInProgress = false;
+            }
+            // Не обновляем дисплей пока ждем данные (экономия ресурсов)
+            return;
+        }
+        
+        // Проверка необходимости обновления
         bool needUpdate = force || (now - lastUpdate >= updateInterval);
-
         if (!needUpdate) return;
+        
         lastUpdate = now;
 
-        // Запрос температур
+        // Запрос новой конвертации
         dsManager->requestTemperatures();
-        while (!dsManager->isConversionComplete()) {
-            yield();
-        }
-        dsManager->updateTemperatures();
-
+        conversionStartTime = now;
+        conversionInProgress = true;
+        
+        // Показываем старые данные пока идет конвертация
+        updateDisplay(lcd, false);
+    }
+    
+private:
+    void updateDisplay(LCD& lcd, bool freshData) {
         // Заголовок
         lcd.setCursor(0, 0);
         lcd.print(title);
@@ -59,8 +92,8 @@ public:
             lcd.print("T1: ");
             lcd.print(temp1, 1);
             lcd.print("C ");
-            if (temp1 != lastTemp1) {
-                lcd.print(">"); // Индикатор изменения
+            if (freshData && temp1 != lastTemp1) {
+                lcd.print(">");
             } else {
                 lcd.print(" ");
             }
@@ -77,7 +110,7 @@ public:
             lcd.print("T2: ");
             lcd.print(temp2, 1);
             lcd.print("C ");
-            if (temp2 != lastTemp2) {
+            if (freshData && temp2 != lastTemp2) {
                 lcd.print(">");
             } else {
                 lcd.print(" ");
@@ -92,7 +125,7 @@ public:
         lcd.setCursor(0, 3);
         lcd.print("Sensors: ");
         lcd.print(dsManager->getSensorCount());
-        lcd.print(" found    ");
+        lcd.print(" found ");
     }
 };
 

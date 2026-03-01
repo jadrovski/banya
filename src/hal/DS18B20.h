@@ -140,12 +140,15 @@ public:
      */
     bool isConversionComplete() {
         if (config.waitForConversion) {
-            return true;
+            // В режиме ожидания просто проверяем флаг
+            if (!conversionComplete) {
+                conversionComplete = sensors->isConversionComplete();
+            }
+            return conversionComplete;
+        } else {
+            // В асинхронном режиме всегда проверяем датчик
+            return sensors->isConversionComplete();
         }
-        if (!conversionComplete) {
-            conversionComplete = sensors->isConversionComplete();
-        }
-        return conversionComplete;
     }
 
     /**
@@ -153,7 +156,17 @@ public:
      * Вызывать после requestTemperatures() когда isConversionComplete() == true
      */
     void updateTemperatures() {
-        if (!sensors || !conversionComplete) return;
+        if (!sensors) return;
+        
+        // В асинхронном режиме проверяем фактическую готовность
+        if (!config.waitForConversion && !sensors->isConversionComplete()) {
+            return;
+        }
+        
+        // В режиме ожидания проверяем флаг
+        if (config.waitForConversion && !conversionComplete) {
+            return;
+        }
 
         for (uint8_t i = 0; i < sensorCount; i++) {
             float temp = sensors->getTempC(sensorData[i].address);
