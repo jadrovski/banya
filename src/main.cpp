@@ -42,7 +42,7 @@ constexpr uint8_t LEDC_CHANNEL_B = 2;
 #endif
 
 constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM3; // Touch конфигурация (используем T3 = GPIO15)
-constexpr float TOUCH_THRESHOLD_PERCENT = 0.9f; // Порог срабатывания тача (90% от baseline)
+constexpr float TOUCH_THRESHOLD_PERCENT = 0.8f; // Порог срабатывания тача (% от baseline)
 constexpr uint32_t TOUCH_DEBOUNCE_MS = 50;
 
 // ============================================================================
@@ -461,28 +461,10 @@ void loop() {
     // Обработка веб-клиентов
     webServer.handleClient();
 
-    // Проверка WiFi подключения
-    if (wifi.isConnected()) {
-        // Мигание LED для индикации работы WiFi
-        static unsigned long lastBlink = 0;
-        if (millis() - lastBlink > 3000) {
-            ledStrip.setColor(SaunaColors::calm());
-            delay(50);
-            ledStrip.setColor(RGB(0, 0, 0));
-            lastBlink = millis();
-        }
-    }
-
     // Обработка Touch сенсора
     if (touch.isNewTouch()) {
         Serial.println("Touch detected!");
-
         pageMgr.nextPage();
-
-        // Визуальная обратная связь
-        ledStrip.setColor(RGB(50, 50, 50));
-        delay(100);
-        ledStrip.setColor(RGB(0, 0, 0));
     }
 
     pageMgr.render();
