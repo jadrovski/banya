@@ -21,13 +21,15 @@ struct DS18B20Config {
     uint8_t maxSensors;             // Максимум сенсоров (по умолчанию 2)
     uint8_t resolution;             // Разрешение 9-12 бит (по умолчанию 12)
     bool waitForConversion;         // Ждать конвертацию (по умолчанию false)
+    unsigned long updateInterval;   // Интервал обновления температур (по умолчанию 2000мс)
 
     DS18B20Config(
         uint8_t pin = 5,
         uint8_t max = 2,
         uint8_t res = 12,
-        bool wait = false
-    ) : dataPin(pin), maxSensors(max), resolution(res), waitForConversion(wait) {}
+        bool wait = false,
+        unsigned long interval = 2000
+    ) : dataPin(pin), maxSensors(max), resolution(res), waitForConversion(wait), updateInterval(interval) {}
 };
 
 /**
@@ -64,6 +66,8 @@ private:
     uint8_t sensorCount;
     unsigned long lastRequestTime;
     bool conversionComplete;
+    unsigned long lastUpdateTime;
+    bool conversionInProgress;
 
 public:
     /**
@@ -76,7 +80,9 @@ public:
           sensors(nullptr),
           sensorCount(0),
           lastRequestTime(0),
-          conversionComplete(false) {
+          conversionComplete(false),
+          lastUpdateTime(0),
+          conversionInProgress(false) {
         for (uint8_t i = 0; i < MAX_DS18B20_SENSORS; i++) {
             sensorData[i].index = i;
             sensorData[i].connected = false;
@@ -304,6 +310,32 @@ public:
      * @brief Получить конфигурацию
      */
     const DS18B20Config& getConfig() const { return config; }
+
+    /**
+     * @brief Автоматическое обновление температур (вызывать в loop)
+     * Менеджер сам запрашивает и обновляет температуры по таймеру
+     */
+    void update() {
+        if (!sensors || sensorCount == 0) return;
+
+        unsigned long now = millis();
+
+        // Если конвертация в процессе, проверяем готовность
+        if (conversionInProgress) {
+            if (sensors->isConversionComplete()) {
+                updateTemperatures();
+                conversionInProgress = false;
+                lastUpdateTime = now;
+            }
+            return;
+        }
+
+        // Проверка интервала обновления
+        if (now - lastUpdateTime >= config.updateInterval) {
+            requestTemperatures();
+            conversionInProgress = true;
+        }
+    }
 };
 
 } // namespace HAL

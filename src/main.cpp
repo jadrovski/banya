@@ -24,6 +24,7 @@ constexpr float HPA_TO_MMHG = 0.75006156f;
 
 // DS18B20 конфигурация
 constexpr uint8_t DS18B20_PIN = 5;
+constexpr unsigned long DS18B20_UPDATE_INTERVAL = 2000; // 2 секунды
 
 // RGB LED конфигурация
 constexpr uint8_t LED_R_PIN = 25;
@@ -56,7 +57,7 @@ HAL::LCD lcd(lcdConfig);
 HAL::BME280Config bmeConfig(BME280_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN, SEALEVELPRESSURE_HPA);
 HAL::BME280Sensor bme(bmeConfig);
 
-HAL::DS18B20Config dsConfig(DS18B20_PIN, 2, 12, false);
+HAL::DS18B20Config dsConfig(DS18B20_PIN, 2, 12, false, DS18B20_UPDATE_INTERVAL);
 HAL::DS18B20Manager ds18b20(dsConfig);
 
 HAL::RGBLEDConfig ledConfig(LED_R_PIN, LED_G_PIN, LED_B_PIN,
@@ -119,25 +120,13 @@ void displayWelcome() {
 }
 
 // ============================================================================
-// Чтение сенсоров
-// ============================================================================
-
-void readDS18B20Temperatures() {
-    ds18b20.requestTemperatures();
-    while (!ds18b20.isConversionComplete()) {
-        yield();
-    }
-    ds18b20.updateTemperatures();
-}
-
-// ============================================================================
 // Провайдер статуса для веб-сервера
 // ============================================================================
 
 HAL::SaunaStatus getSaunaStatus() {
     HAL::SaunaStatus status;
 
-    // Температуры
+    // Температуры (DS18B20 обновляется автоматически в loop())
     status.temp1 = ds18b20.getTemperature(0);
     status.temp2 = ds18b20.getTemperature(1);
     status.temp3 = bme.getTemperature();
@@ -457,6 +446,9 @@ void loop() {
     if (pLedController) {
         pLedController->update();
     }
+
+    // Автоматическое обновление температур DS18B20
+    ds18b20.update();
 
     // Обработка веб-клиентов
     webServer.handleClient();
