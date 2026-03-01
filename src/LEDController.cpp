@@ -52,7 +52,7 @@ void LEDStripController::off() {
     strip->off();
 }
 
-void LEDStripController::update() {
+void LEDStripController::handleLoop() {
     if (currentEffect == EFFECT_NONE) return;
 
     switch (currentEffect) {

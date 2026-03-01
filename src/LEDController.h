@@ -40,7 +40,7 @@ public:
     void off();
 
     // Animation update (call in loop())
-    void update();
+    void handleLoop();
 
     // Check if effect is running
     bool isEffectRunning() const { return currentEffect != EFFECT_NONE; }

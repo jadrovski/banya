@@ -304,7 +304,7 @@ public:
      * @brief Автоматическое обновление температур (вызывать в loop)
      * Менеджер сам запрашивает и обновляет температуры по таймеру
      */
-    void handleLopp() {
+    void handleLoop() {
         if (!sensors || sensorCount == 0) return;
 
         unsigned long now = millis();

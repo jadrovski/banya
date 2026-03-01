@@ -503,7 +503,7 @@ void loop() {
     }
 
     // Автоматическое обновление температур DS18B20
-    ds18b20.handleLopp();
+    ds18b20.handleLoop();
 
     // Обработка веб-клиентов
     webServer.handleLoop();
