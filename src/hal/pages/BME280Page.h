@@ -58,7 +58,7 @@ public:
         lastTemp = temp;
 
         // Влажность - строка 2
-        lcd.line_printf(2, "H: %.1f%%", humidity);
+        lcd.line_printf(2, "H: %.1f %%", humidity);
         lastHumidity = humidity;
 
         // Давление - строка 3

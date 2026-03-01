@@ -17,6 +17,7 @@ private:
     DS18B20Manager* dsManager;
     float lastTemp1;
     float lastTemp2;
+    float lastTemp3;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
@@ -26,6 +27,7 @@ public:
           dsManager(ds),
           lastTemp1(-127),
           lastTemp2(-127),
+          lastTemp3(-127),
           lastUpdate(0),
           updateInterval(interval) {}
 
@@ -34,6 +36,7 @@ public:
         lastUpdate = 0;
         lastTemp1 = -127;
         lastTemp2 = -127;
+        lastTemp3 = -127;
     }
 
     void render(LCD& lcd, bool force = false) override {
@@ -52,6 +55,8 @@ private:
 
         // Заголовок
         lcd.line_printf(0, "%s", title.c_str());
+        lcd.setCursor(lcd.getConfig().columns - 2, 0);
+        lcd.print(dsManager->getSensorCount());
 
         // Сенсор 1
         float temp1 = dsManager->getTemperature(0);
@@ -65,14 +70,20 @@ private:
         // Сенсор 2
         float temp2 = dsManager->getTemperature(1);
         if (dsManager->isConnected(1) && temp2 != DEVICE_DISCONNECTED_C) {
-            lcd.line_printf(2, "T2: %.1f C", temp2);
+            lcd.line_printf(2, "T2: %.1f", temp2);
             lastTemp2 = temp2;
         } else {
             lcd.line_printf(2, "T2: --.- C");
         }
 
-        // Статус
-        lcd.line_printf(3, "Sensors: %d found", dsManager->getSensorCount());
+        // Сенсор 3
+        float temp3 = dsManager->getTemperature(2);
+        if (dsManager->isConnected(2) && temp3 != DEVICE_DISCONNECTED_C) {
+            lcd.line_printf(3, "T3: %.1f", temp3);
+            lastTemp3 = temp3;
+        } else {
+            lcd.line_printf(3, "T3: --.- C");
+        }
     }
 };
 
