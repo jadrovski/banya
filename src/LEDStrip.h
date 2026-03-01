@@ -51,6 +51,7 @@ public:
     // Gamma correction
     virtual void enableGamma(bool enable) { gammaEnabled = enable; }
     virtual void setGamma(float gamma) { gammaValue = gamma; }
+    virtual bool isGammaEnabled() const { return gammaEnabled; }
 
     // Status
     virtual RGB getCurrentColor() const { return currentColor; }

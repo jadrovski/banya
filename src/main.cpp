@@ -2,6 +2,7 @@
 #include "hal/HAL.h"
 #include "hal/pages/Sensors.h"
 #include "hal/pages/Status.h"
+#include "hal/pages/LEDStripPage.h"
 #include "LEDController.h"
 #include "LEDStrip.h"
 #include "color/SaunaColors.h"
@@ -100,9 +101,9 @@ HAL::DallasSensorsPage *dallasPage = nullptr;
 HAL::BME280Page *bmePage = nullptr;
 HAL::DisplayPage *wifiPage = nullptr;
 HAL::SystemStatusPage *statusPage = nullptr;
+HAL::LEDStripPage *ledStripPage = nullptr;
 
-// Sauna-specific LED strip (обертка над HAL::RGBLED)
-LEDStrip *pLedStrip = nullptr;
+// Sauna-specific LED strip controller
 LEDStripController *pLedController = nullptr;
 
 // ============================================================================
@@ -399,18 +400,10 @@ void setup() {
         Serial.println("FAILED");
     }
 
-    // Создание объектов управления LED
-    LEDStrip adapter(LED_R_PIN, LED_G_PIN, LED_B_PIN,
-                     LEDC_CHANNEL_R, LEDC_CHANNEL_G, LEDC_CHANNEL_B,
-                     1000, 8);
-    adapter.begin();
-    pLedStrip = &adapter;
-
-    LEDStripController ledController(pLedStrip);
-    pLedController = &ledController;
+    // Создание контроллера LED эффектов
+    pLedController = new LEDStripController(&ledStrip);
 
     // Инициализация WiFi
-    Serial.print("Initializing WiFi... ");
     if (wifi.begin()) {
         Serial.println("OK");
     } else {
@@ -463,12 +456,14 @@ void setup() {
     bmePage = new HAL::BME280Page(&bme, "BME280 Sensor");
     wifiPage = new HAL::WiFiInfoPage(&wifi, "WiFi Info");
     statusPage = new HAL::SystemStatusPage(&wifi, "System Status");
+    ledStripPage = new HAL::LEDStripPage(&ledStrip, pLedController, "LED Strip");
 
     // Добавление страниц в менеджер
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(dallasPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(bmePage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(statusPage));
+    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(ledStripPage));
 
     pageMgr.begin(&lcd);
 

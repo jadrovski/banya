@@ -1,9 +1,9 @@
 #include "LEDController.h"
-#include "LEDStrip.h"
+#include "hal/RGBLED.h"
 #include "color/HSV.h"
 
 // LEDStripController implementation
-LEDStripController::LEDStripController(LEDStrip *strip)
+LEDStripController::LEDStripController(HAL::RGBLED *strip)
     : strip(strip),
       lastUpdate(0),
       effectStart(0),

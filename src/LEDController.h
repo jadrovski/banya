@@ -2,13 +2,14 @@
 #define SAUNA_LEDCONTROLLER_H
 #include "color/RGB.h"
 
-
-class LEDStrip;
+namespace HAL {
+    class RGBLED;
+}
 
 // LED Strip Controller (manages multiple strips/patterns)
 class LEDStripController {
 private:
-    LEDStrip* strip;
+    HAL::RGBLED* strip;
     unsigned long lastUpdate;
     unsigned long effectStart;
 
@@ -28,7 +29,7 @@ private:
     uint8_t currentRepeat;
 
 public:
-    LEDStripController(LEDStrip* strip);
+    LEDStripController(HAL::RGBLED* strip);
 
     // Effect control
     void startFade(const RGB& from, const RGB& to, uint32_t duration);
