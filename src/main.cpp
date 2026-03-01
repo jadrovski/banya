@@ -40,11 +40,9 @@ constexpr uint8_t LEDC_CHANNEL_B = 2;
 #ifndef WIFI_PASSWORD
     #error "WIFI_PASSWORD not defined! Check platformio.ini and wifi.ini"
 #endif
-constexpr uint32_t WIFI_DISPLAY_TIMEOUT = 10000; // 10 секунд отображения IP
 
-// Touch конфигурация (используем T8 = GPIO33)
-constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM8;
-constexpr uint16_t TOUCH_THRESHOLD = 500; // Порог срабатывания (между 52 и 995)
+constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM3; // Touch конфигурация (используем T3 = GPIO15)
+constexpr uint16_t TOUCH_THRESHOLD = 500; // Порог срабатывания тача
 
 // ============================================================================
 // Глобальные объекты HAL
@@ -88,53 +86,6 @@ LEDStrip *pLedStrip = nullptr;
 LEDStripController *pLedController = nullptr;
 
 // ============================================================================
-// Пользовательские символы LCD
-// ============================================================================
-
-byte smiley[8] = {
-    B00000,
-    B10001,
-    B00000,
-    B00000,
-    B10001,
-    B01110,
-    B00000,
-};
-
-byte wifiIcon[8] = {
-    B00000,
-    B00000,
-    B01110,
-    B10001,
-    B00100,
-    B01010,
-    B00000,
-    B00100
-};
-
-byte touchIcon[8] = {
-    B00100,
-    B01110,
-    B11111,
-    B00100,
-    B00100,
-    B00100,
-    B00000,
-    B00000,
-};
-
-byte arrowRight[8] = {
-    B00000,
-    B00010,
-    B00110,
-    B01110,
-    B00110,
-    B00010,
-    B00000,
-    B00000,
-};
-
-// ============================================================================
 // Режимы работы
 // ============================================================================
 
@@ -149,39 +100,21 @@ enum SaunaMode {
 };
 
 SaunaMode currentMode = MODE_AUTO;
-unsigned long lastSensorUpdate = 0;
-const unsigned long SENSOR_UPDATE_INTERVAL = 2000; // 2 секунды
 
 // ============================================================================
 // Функции LCD
 // ============================================================================
 
-void clearLine(const uint8_t lineNumber) {
-    constexpr char blankLine20[] = "                    ";
-    lcd.setCursor(0, lineNumber);
-    lcd.print(blankLine20);
-}
-
 void displayWelcome() {
-    lcd.setCursor(2, 0);
-    lcd.print("THIS. IS.");
-    lcd.setCursor(2, 1);
-    lcd.print("SAUNAAA!!!");
-    delay(1000);
+    lcd.setCursor(8, 1);
+    lcd.write(RUSSIAN_B_CHAR);
+    lcd.print("AH");
+    lcd.write(RUSSIAN_YA_CHAR);
+    lcd.setCursor(8, 2);
+    lcd.print("v1.0");
+    delay(5000);
     lcd.clear();
     delay(500);
-}
-
-void displayIP(const String &ip) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.write(1); // WiFi иконка
-    lcd.print(" WiFi Connected!");
-    lcd.setCursor(0, 1);
-    lcd.print("IP: ");
-    lcd.print(ip);
-    lcd.setCursor(0, 3);
-    lcd.print("10 sec...");
 }
 
 // ============================================================================
@@ -392,10 +325,6 @@ void setup() {
     Serial.print("Initializing LCD... ");
     if (lcd.begin()) {
         Serial.println("OK");
-        lcd.createChar(0, smiley);
-        lcd.createChar(1, wifiIcon);
-        lcd.createChar(2, touchIcon);
-        lcd.createChar(3, arrowRight);
         displayWelcome();
     } else {
         Serial.println("FAILED");
