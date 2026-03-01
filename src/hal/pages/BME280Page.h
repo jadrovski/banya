@@ -51,44 +51,18 @@ public:
         float pressure_mmHg = bme->getPressure_mmHg(hpaToMmHg);
 
         // Заголовок
-        lcd.setCursor(0, 0);
-        lcd.print(title);
-        lcd.print("            ");
+        lcd.line_printf(0, "%s", title.c_str());
 
         // Температура - строка 1
-        lcd.setCursor(0, 1);
-        lcd.print("T: ");
-        lcd.print(temp, 1);
-        lcd.print("C ");
-        if (abs(temp - lastTemp) > 0.05) {
-            lcd.print(">");
-        } else {
-            lcd.print(" ");
-        }
+        lcd.line_printf(1, "T: %.1f C", temp);
         lastTemp = temp;
 
         // Влажность - строка 2
-        lcd.setCursor(0, 2);
-        lcd.print("H: ");
-        lcd.print(humidity, 1);
-        lcd.print("% ");
-        if (abs(humidity - lastHumidity) > 0.5) {
-            lcd.print(">");
-        } else {
-            lcd.print(" ");
-        }
+        lcd.line_printf(2, "H: %.1f%%", humidity);
         lastHumidity = humidity;
 
         // Давление - строка 3
-        lcd.setCursor(0, 3);
-        lcd.print("P: ");
-        lcd.print((int)pressure_mmHg);
-        lcd.print(" mmHg ");
-        if (abs(pressure_mmHg - lastPressure) > 0.5) {
-            lcd.print(">");
-        } else {
-            lcd.print(" ");
-        }
+        lcd.line_printf(3, "P: %d mmHg", (int)pressure_mmHg);
         lastPressure = pressure_mmHg;
     }
 };
