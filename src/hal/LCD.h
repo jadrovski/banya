@@ -70,7 +70,7 @@ namespace HAL {
                 buffer[config.columns] = '\0';
             }
 
-            lcd->print(buffer);
+            print(buffer);
         }
 
     public:
@@ -98,20 +98,24 @@ namespace HAL {
             lcd = new LiquidCrystal_I2C(config.i2cAddress, config.columns, config.rows);
             lcd->init(config.sdaPin, config.sclPin);
 
+            // Проверяем наличие дисплея на шине I2C
+            if (!isConnected()) {
+                delete lcd;
+                lcd = nullptr;
+                initialized = false;
+                return false;
+            }
+
             if (config.backlightOnStart) {
-                lcd->backlight();
-                backlightState = true;
+                backlight();
             } else {
-                lcd->noBacklight();
-                backlightState = false;
+                noBacklight();
             }
 
             if (config.cursorOnStart) {
-                lcd->cursor();
-                cursorState = true;
+                cursor();
             } else {
-                lcd->noCursor();
-                cursorState = false;
+                noCursor();
             }
 
             //lcd->createChar(0, const_cast<byte*>(smiley));
@@ -129,7 +133,9 @@ namespace HAL {
          * @brief Проверка подключения дисплея
          */
         bool isConnected() override {
-            if (!lcd) return false;
+            if (!lcd || !initialized) {
+                return false;
+            }
             return I2CDevice::isConnected();
         }
 
