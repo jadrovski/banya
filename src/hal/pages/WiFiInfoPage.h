@@ -49,9 +49,9 @@ public:
         // Строка 2: Статус или RSSI + канал
         if (wifi->isConnected()) {
             const int rssi = wifi->getRSSI();
-            const int quality = wifi->getSignalQuality();
+            const int quality = constrain(wifi->getSignalQuality(), 0, 99);
             const int ch = wifi->getChannel();
-            lcd.line_printf(1, "%3ddBm(%3d%%) Ch:%2d", rssi, quality, ch);
+            lcd.line_printf(1, "%03ddBm(%02d%%) Ch:%02d", rssi, quality, ch);
         } else {
             const String status = wifi->getStatusString();
             lcd.line_printf(1, status.c_str());
