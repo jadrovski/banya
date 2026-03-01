@@ -3,21 +3,42 @@
 
 #include <Arduino.h>
 #include <driver/touch_pad.h>
+#include <functional>
 
 namespace HAL {
+    /**
+     * @brief Типы событий Touch сенсора
+     */
+    enum class TouchEvent {
+        NONE,           // Нет события
+        TAP,            // Короткое нажатие
+        LONG_PRESS,     // Длительное нажатие
+        VERY_LONG_PRESS // Очень длительное нажатие
+    };
+
     /**
      * @brief Конфигурация Touch сенсора
      */
     struct TouchConfig {
-        touch_pad_t touchPin; // Touch пин (T0-T9)
-        float thresholdPercent; // Порог срабатывания (0.0-1.0, процент от baseline)
-        uint32_t debounceMs; // Время подавления дребезга (мс)
+        touch_pad_t touchPin;           // Touch пин (T0-T9)
+        float thresholdPercent;         // Порог срабатывания (0.0-1.0, процент от baseline)
+        uint32_t debounceMs;            // Время подавления дребезга (мс)
+        uint32_t longPressMs;           // Время для long press (мс)
+        uint32_t veryLongPressMs;       // Время для very-long press (мс)
+        bool enableCallbacks;           // Включить callback-и
 
         TouchConfig(
-            touch_pad_t pin = TOUCH_PAD_NUM4, // T4 = GPIO4
+            touch_pad_t pin = TOUCH_PAD_NUM4,   // T4 = GPIO4
             float threshPercent = 0.9f,
-            uint32_t debounce = 200
-        ) : touchPin(pin), thresholdPercent(threshPercent), debounceMs(debounce) {
+            uint32_t debounce = 200,
+            uint32_t longPressTime = 1000,      // 1 second for long press
+            uint32_t veryLongPressTime = 3000   // 3 seconds for very-long press
+        ) : touchPin(pin), 
+            thresholdPercent(threshPercent), 
+            debounceMs(debounce),
+            longPressMs(longPressTime),
+            veryLongPressMs(veryLongPressTime),
+            enableCallbacks(true) {
         }
     };
 
@@ -49,6 +70,11 @@ namespace HAL {
     }
 
     /**
+     * @brief Callback типы для событий Touch
+     */
+    using TouchCallback = std::function<void(TouchEvent event)>;
+
+    /**
      * @brief Hardware Access Layer для Touch сенсора ESP32
      *
      * Поддерживает:
@@ -56,17 +82,26 @@ namespace HAL {
      * - Настраиваемый порог срабатывания
      * - Подавление дребезга
      * - Статистика нажатий
+     * - Long press и very-long press детекция
+     * - Callback-и для событий
      */
     class TouchSensor {
     private:
         TouchConfig config;
         bool initialized;
         bool lastTouchState;
+        bool lastRawState;
         unsigned long lastTouchTime;
         unsigned long lastDebounceTime;
+        unsigned long touchStartTime;      // Время начала текущего нажатия
         uint32_t touchCount;
+        uint32_t longPressCount;         // Счётчик long press событий
+        uint32_t veryLongPressCount;     // Счётчик very-long press событий
         uint16_t baselineValue;
-        uint16_t currentThreshold; // Calculated threshold from baseline * percentage
+        uint16_t currentThreshold;       // Calculated threshold from baseline * percentage
+        bool longPressTriggered;         // Флаг: long press уже сработал
+        bool veryLongPressTriggered;     // Флаг: very-long press уже сработал
+        TouchCallback callback;          // Callback для событий
 
     public:
         /**
@@ -77,10 +112,17 @@ namespace HAL {
             : config(cfg),
               initialized(false),
               lastTouchState(false),
+              lastRawState(false),
               lastTouchTime(0),
               lastDebounceTime(0),
+              touchStartTime(0),
               touchCount(0),
-              baselineValue(0) {
+              longPressCount(0),
+              veryLongPressCount(0),
+              baselineValue(0),
+              longPressTriggered(false),
+              veryLongPressTriggered(false),
+              callback(nullptr) {
         }
 
         /**
@@ -168,12 +210,13 @@ namespace HAL {
 
             unsigned long currentTime = millis();
 
-            // Подавление дребезга: если состояние изменилось, сбрасываем таймер
-            if (touched != lastTouchState) {
+            // Подавление дребезга: если "сырое" состояние изменилось, сбрасываем таймер
+            if (touched != lastRawState) {
                 lastDebounceTime = currentTime;
+                lastRawState = touched;
             }
 
-            // Если прошло достаточно времени после последнего изменения
+            // Если прошло достаточно времени после последнего изменения "сырого" состояния
             if ((currentTime - lastDebounceTime) > config.debounceMs) {
                 // Обновляем стабильное состояние только если оно изменилось
                 if (touched != lastTouchState) {
@@ -182,13 +225,54 @@ namespace HAL {
                         // Зафиксировано нажатие
                         touchCount++;
                         lastTouchTime = currentTime;
+                        touchStartTime = currentTime;
+                        longPressTriggered = false;
+                        veryLongPressTriggered = false;
+                    } else {
+                        // Отпускание
                     }
                 }
             }
 
-            // Возвращаем текущее "сырое" состояние с учётом порога
-            // Debounce применяется только для счётчика нажатий
-            return touched;
+            // Возвращаем debounce-ное состояние
+            return lastTouchState;
+        }
+
+        /**
+         * @brief Обработка событий (long press, very-long press)
+         * Вызывать в основном цикле loop()
+         */
+        void processEvents() {
+            if (!initialized || !config.enableCallbacks) return;
+
+            // Сначала обновляем состояние тача (с учётом debounce)
+            isTouched();
+
+            bool touched = lastTouchState;
+            unsigned long currentTime = millis();
+
+            // Детекция long press и very-long press
+            if (touched) {
+                unsigned long pressDuration = currentTime - touchStartTime;
+
+                // Проверка very-long press (приоритет)
+                if (!veryLongPressTriggered && pressDuration >= config.veryLongPressMs) {
+                    veryLongPressTriggered = true;
+                    longPressTriggered = true;
+                    veryLongPressCount++;
+                    if (callback) {
+                        callback(TouchEvent::VERY_LONG_PRESS);
+                    }
+                }
+                // Проверка long press
+                else if (!longPressTriggered && pressDuration >= config.longPressMs) {
+                    longPressTriggered = true;
+                    longPressCount++;
+                    if (callback) {
+                        callback(TouchEvent::LONG_PRESS);
+                    }
+                }
+            }
         }
 
         /**
@@ -210,6 +294,39 @@ namespace HAL {
 
             if (!touched) {
                 wasTouched = false;
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief Проверка события TAP (короткое нажатие)
+         * @return true если было короткое нажатие (отпускание после нажатия)
+         */
+        bool isTap() {
+            static bool wasTouched = false;
+            static unsigned long lastDebounce = 0;
+            static unsigned long pressStart = 0;
+            static bool tapProcessed = false;
+
+            bool touched = isTouched();
+            unsigned long currentTime = millis();
+
+            if (touched && !wasTouched && (currentTime - lastDebounce) > config.debounceMs) {
+                wasTouched = true;
+                lastDebounce = currentTime;
+                pressStart = currentTime;
+                tapProcessed = false;
+            }
+
+            if (!touched && wasTouched) {
+                wasTouched = false;
+                // Если отпускание произошло раньше long press - это TAP
+                unsigned long pressDuration = currentTime - pressStart;
+                if (pressDuration < config.longPressMs && !tapProcessed) {
+                    tapProcessed = true;
+                    return true;
+                }
             }
 
             return false;
@@ -304,6 +421,79 @@ namespace HAL {
         bool isInitialized() const { return initialized; }
 
         /**
+         * @brief Установить callback для событий Touch
+         * @param cb Callback функция
+         */
+        void setCallback(TouchCallback cb) {
+            callback = cb;
+        }
+
+        /**
+         * @brief Установить время long press
+         * @param ms Время в миллисекундах
+         */
+        void setLongPressTime(uint32_t ms) {
+            config.longPressMs = ms;
+        }
+
+        /**
+         * @brief Установить время very-long press
+         * @param ms Время в миллисекундах
+         */
+        void setVeryLongPressTime(uint32_t ms) {
+            config.veryLongPressMs = ms;
+        }
+
+        /**
+         * @brief Получить время long press
+         * @return Время в миллисекундах
+         */
+        uint32_t getLongPressTime() const { return config.longPressMs; }
+
+        /**
+         * @brief Получить время very-long press
+         * @return Время в миллисекундах
+         */
+        uint32_t getVeryLongPressTime() const { return config.veryLongPressMs; }
+
+        /**
+         * @brief Получить количество long press событий
+         */
+        uint32_t getLongPressCount() const { return longPressCount; }
+
+        /**
+         * @brief Получить количество very-long press событий
+         */
+        uint32_t getVeryLongPressCount() const { return veryLongPressCount; }
+
+        /**
+         * @brief Сбросить счётчики long press / very-long press
+         */
+        void resetPressCounts() {
+            longPressCount = 0;
+            veryLongPressCount = 0;
+        }
+
+        /**
+         * @brief Получить длительность текущего нажатия
+         * @return Длительность в мс, 0 если не нажато
+         */
+        unsigned long getCurrentPressDuration() const {
+            if (!lastTouchState) return 0;
+            return millis() - touchStartTime;
+        }
+
+        /**
+         * @brief Проверка, был ли long press в текущем нажатии
+         */
+        bool wasLongPressTriggered() const { return longPressTriggered; }
+
+        /**
+         * @brief Проверка, был ли very-long press в текущем нажатии
+         */
+        bool wasVeryLongPressTriggered() const { return veryLongPressTriggered; }
+
+        /**
          * @brief Получить информацию о сенсоре
          */
         String getInfo() const {
@@ -320,9 +510,16 @@ namespace HAL {
             info += (config.thresholdPercent * 100.0f);
             info += "%) | Touches: ";
             info += touchCount;
+            info += " | LP: ";
+            info += longPressCount;
+            info += " | VLP: ";
+            info += veryLongPressCount;
 
             if (lastTouchState) {
                 info += " [TOUCHED]";
+                info += " (";
+                info += getCurrentPressDuration();
+                info += "ms)";
             }
 
             return info;

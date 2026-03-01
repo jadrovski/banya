@@ -71,8 +71,11 @@ HAL::WiFiManager wifi(wifiConfig);
 HAL::SaunaWebServer webServer;
 
 // Touch сенсор
-HAL::TouchConfig touchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS);
+HAL::TouchConfig touchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, 1000, 3000);
 HAL::TouchSensor touch(touchConfig);
+
+// Флаг для предотвращения множественных перезаподключений
+bool wifiReconnecting = false;
 
 // Менеджер страниц
 HAL::PageManager pageMgr;
@@ -146,6 +149,43 @@ HAL::SaunaStatus getSaunaStatus() {
     status.mode = modeNames[currentMode];
 
     return status;
+}
+
+// ============================================================================
+// Обработка событий Touch сенсора
+// ============================================================================
+
+/**
+ * @brief Callback для обработки событий Touch сенсора
+ * - Long press: WiFi reconnect
+ * - Very-long press: reboot устройства
+ */
+void handleTouchCallback(HAL::TouchEvent event) {
+    switch (event) {
+        case HAL::TouchEvent::LONG_PRESS:
+            if (!wifiReconnecting) {
+                Serial.println("Touch: Long press - WiFi reconnecting...");
+                wifiReconnecting = true;
+                wifi.reconnect();
+            }
+            break;
+            
+        case HAL::TouchEvent::VERY_LONG_PRESS:
+            Serial.println("Touch: Very-long press - Rebooting device...");
+            lcd.clear();
+            lcd.setCursor(0, 1);
+            lcd.print("Rebooting...");
+            delay(500);
+            ESP.restart();
+            break;
+            
+        case HAL::TouchEvent::TAP:
+            // TAP обрабатывается в loop() для переключения страниц
+            break;
+            
+        default:
+            break;
+    }
 }
 
 // ============================================================================
@@ -398,6 +438,9 @@ void setup() {
         Serial.println(touch.getBaselineValue());
         Serial.print("Touch: Threshold = ");
         Serial.println(touch.getThreshold());
+        
+        // Установка callback для обработки long press событий
+        touch.setCallback(handleTouchCallback);
     } else {
         Serial.println("FAILED");
     }
@@ -430,7 +473,8 @@ void setup() {
     Serial.println("Modes: A=Auto, T=Temp, H=Humidity, C=Comfort, S=Safety, R=Relax, M=Manual");
     Serial.println("Manual: 0-9=Brightness, R/G/B/W=Colors, +=Warmer, -=Cooler");
     Serial.println("Effects: P=Pulse, Q=Rainbow, B=Blink, X=Stop, O=Off");
-    Serial.println("Pages: > or . = Next, < or , = Prev, Touch = Next");
+    Serial.println("Pages: > or . = Next, < or , = Prev, Touch Tap = Next");
+    Serial.println("Touch: Long press = WiFi reconnect, Very-long press = Reboot");
     Serial.println("Diagnostics: D=HAL Info, I=Status, L=WiFi Reconnect");
     Serial.println("\nWeb Interface: http://" + wifi.getIPAddressString());
     Serial.println("Touch sensor: " + touch.getPinName() + " (for page switching)");
@@ -453,9 +497,17 @@ void loop() {
     // Обработка веб-клиентов
     webServer.handleClient();
 
-    // Обработка Touch сенсора
-    if (touch.isNewTouch()) {
+    // Обработка Touch событий (long press, very-long press)
+    touch.processEvents();
+    
+    // Обработка Touch сенсора для переключения страниц (tap)
+    if (touch.isTap()) {
         pageMgr.nextPage();
+    }
+    
+    // Сброс флага WiFi reconnection при успешном подключении
+    if (wifiReconnecting && wifi.isConnected()) {
+        wifiReconnecting = false;
     }
 
     pageMgr.render();
