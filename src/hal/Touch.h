@@ -166,10 +166,6 @@ namespace HAL {
             // Touch работает инвертировано: меньше = касание
             bool touched = value < currentThreshold;
 
-            if (touched) {
-                Serial.println(getInfo());
-            }
-
             unsigned long currentTime = millis();
 
             // Подавление дребезга: если состояние изменилось, сбрасываем таймер
