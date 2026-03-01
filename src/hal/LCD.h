@@ -99,7 +99,7 @@ namespace HAL {
             lcd->init(config.sdaPin, config.sclPin);
 
             // Проверяем наличие дисплея на шине I2C
-            if (!isConnected()) {
+            if (!I2CDevice::isConnected()) {
                 delete lcd;
                 lcd = nullptr;
                 initialized = false;
