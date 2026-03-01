@@ -162,6 +162,11 @@ public:
         }
     }
 
+    void handleLoop() {
+        render();
+        updateAutoSwitch();
+    }
+
     /**
      * @brief Очистить все страницы
      */

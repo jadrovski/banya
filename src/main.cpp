@@ -16,10 +16,12 @@ constexpr uint8_t I2C_SCL_PIN = 22;
 
 // LCD конфигурация
 constexpr uint8_t LCD_I2C_ADDR = 0x27;
+constexpr uint8_t LCD_COLUMNS = 20;
+constexpr uint8_t LCD_ROWS = 4;
 
 // BME280 конфигурация
 constexpr uint8_t BME280_I2C_ADDR = 0x76;
-constexpr float SEALEVELPRESSURE_HPA = 1013.25f;
+constexpr float SEA_LEVEL_PRESSURE_HPA = 1013.25f;
 constexpr float HPA_TO_MMHG = 0.75006156f;
 
 // DS18B20 конфигурация
@@ -36,25 +38,35 @@ constexpr uint8_t LEDC_CHANNEL_B = 2;
 
 // WiFi конфигурация (из build_flags в platformio.ini)
 #ifndef WIFI_SSID
-    #error "WIFI_SSID not defined! Check platformio.ini and wifi.ini"
+#error "WIFI_SSID not defined! Check platformio.ini and wifi.ini"
 #endif
 #ifndef WIFI_PASSWORD
-    #error "WIFI_PASSWORD not defined! Check platformio.ini and wifi.ini"
+#error "WIFI_PASSWORD not defined! Check platformio.ini and wifi.ini"
 #endif
 
 constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM3; // Touch конфигурация (используем T3 = GPIO15)
 constexpr float TOUCH_THRESHOLD_PERCENT = 0.8f; // Порог срабатывания тача (% от baseline)
 constexpr uint32_t TOUCH_DEBOUNCE_MS = 50;
+constexpr uint32_t TOUCH_LONG_PRESS_MS = 1000;
+constexpr uint32_t TOUCH_VERY_LONG_PRESS_MS = 5000;
 
 // ============================================================================
 // Глобальные объекты HAL
 // ============================================================================
 
 // Конфигурация и создание HAL-объектов
-HAL::LCDConfig lcdConfig(LCD_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN, 20, 4, true, false);
+HAL::LCDConfig lcdConfig(
+    LCD_I2C_ADDR,
+    I2C_SDA_PIN,
+    I2C_SCL_PIN,
+    LCD_COLUMNS,
+    LCD_ROWS,
+    true,
+    false
+);
 HAL::LCD lcd(lcdConfig);
 
-HAL::BME280Config bmeConfig(BME280_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN, SEALEVELPRESSURE_HPA);
+HAL::BME280Config bmeConfig(BME280_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN, SEA_LEVEL_PRESSURE_HPA);
 HAL::BME280Sensor bme(bmeConfig);
 
 HAL::DS18B20Config dsConfig(DS18B20_PIN, 12, false, DS18B20_UPDATE_INTERVAL);
@@ -71,11 +83,14 @@ HAL::WiFiManager wifi(wifiConfig);
 HAL::SaunaWebServer webServer;
 
 // Touch сенсор
-HAL::TouchConfig touchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, 1000, 3000);
+HAL::TouchConfig touchConfig(
+    TOUCH_PIN,
+    TOUCH_THRESHOLD_PERCENT,
+    TOUCH_DEBOUNCE_MS,
+    TOUCH_LONG_PRESS_MS,
+    TOUCH_VERY_LONG_PRESS_MS
+);
 HAL::TouchSensor touch(touchConfig);
-
-// Флаг для предотвращения множественных перезаподключений
-bool wifiReconnecting = false;
 
 // Менеджер страниц
 HAL::PageManager pageMgr;
@@ -117,7 +132,7 @@ void displayWelcome() {
     lcd.write(RUSSIAN_YA_CHAR);
     lcd.setCursor(8, 2);
     lcd.print("v1.0");
-    delay(5000);
+    delay(500);
     lcd.clear();
     delay(500);
 }
@@ -163,13 +178,9 @@ HAL::SaunaStatus getSaunaStatus() {
 void handleTouchCallback(HAL::TouchEvent event) {
     switch (event) {
         case HAL::TouchEvent::LONG_PRESS:
-            if (!wifiReconnecting) {
-                Serial.println("Touch: Long press - WiFi reconnecting...");
-                wifiReconnecting = true;
-                wifi.reconnect();
-            }
+            wifi.reconnect();
             break;
-            
+
         case HAL::TouchEvent::VERY_LONG_PRESS:
             Serial.println("Touch: Very-long press - Rebooting device...");
             lcd.clear();
@@ -178,11 +189,11 @@ void handleTouchCallback(HAL::TouchEvent event) {
             delay(500);
             ESP.restart();
             break;
-            
+
         case HAL::TouchEvent::TAP:
-            // TAP обрабатывается в loop() для переключения страниц
+            pageMgr.nextPage();
             break;
-            
+
         default:
             break;
     }
@@ -438,7 +449,7 @@ void setup() {
         Serial.println(touch.getBaselineValue());
         Serial.print("Touch: Threshold = ");
         Serial.println(touch.getThreshold());
-        
+
         // Установка callback для обработки long press событий
         touch.setCallback(handleTouchCallback);
     } else {
@@ -488,30 +499,20 @@ void loop() {
     handleSerialCommands();
 
     if (pLedController) {
-        pLedController->update();
+        pLedController->handleLoop();
     }
 
     // Автоматическое обновление температур DS18B20
-    ds18b20.update();
+    ds18b20.handleLopp();
 
     // Обработка веб-клиентов
-    webServer.handleClient();
+    webServer.handleLoop();
 
-    // Обработка Touch событий (long press, very-long press)
-    touch.processEvents();
-    
-    // Обработка Touch сенсора для переключения страниц (tap)
-    if (touch.isTap()) {
-        pageMgr.nextPage();
-    }
-    
-    // Сброс флага WiFi reconnection при успешном подключении
-    if (wifiReconnecting && wifi.isConnected()) {
-        wifiReconnecting = false;
-    }
+    // Обработка процесса WiFi переподключения (неблокирующее)
+    wifi.handleLoop();
 
-    pageMgr.render();
+    // Обработка Touch событий (tap, long press, very-long press)
+    touch.handleLoop();
 
-    // Авто-переключение страниц (если включено)
-    pageMgr.updateAutoSwitch();
+    pageMgr.handleLoop();
 }

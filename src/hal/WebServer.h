@@ -103,7 +103,7 @@ public:
     /**
      * @brief Обработка клиентских запросов (вызывать в loop)
      */
-    void handleClient() {
+    void handleLoop() {
         if (server && running) {
             server->handleClient();
         }

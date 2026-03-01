@@ -102,6 +102,9 @@ namespace HAL {
         bool longPressTriggered;         // Флаг: long press уже сработал
         bool veryLongPressTriggered;     // Флаг: very-long press уже сработал
         TouchCallback callback;          // Callback для событий
+        bool wasTouchedForTap;           // Флаг: было нажатие для TAP детекции
+        unsigned long tapPressStart;     // Время начала нажатия для TAP
+        bool tapProcessed;               // Флаг: TAP уже обработан
 
     public:
         /**
@@ -122,7 +125,10 @@ namespace HAL {
               baselineValue(0),
               longPressTriggered(false),
               veryLongPressTriggered(false),
-              callback(nullptr) {
+              callback(nullptr),
+              wasTouchedForTap(false),
+              tapPressStart(0),
+              tapProcessed(false) {
         }
 
         /**
@@ -228,6 +234,10 @@ namespace HAL {
                         touchStartTime = currentTime;
                         longPressTriggered = false;
                         veryLongPressTriggered = false;
+                        // Для TAP детекции
+                        wasTouchedForTap = true;
+                        tapPressStart = currentTime;
+                        tapProcessed = false;
                     } else {
                         // Отпускание
                     }
@@ -239,10 +249,10 @@ namespace HAL {
         }
 
         /**
-         * @brief Обработка событий (long press, very-long press)
+         * @brief Обработка событий (tap, long press, very-long press)
          * Вызывать в основном цикле loop()
          */
-        void processEvents() {
+        void handleLoop() {
             if (!initialized || !config.enableCallbacks) return;
 
             // Сначала обновляем состояние тача (с учётом debounce)
@@ -270,6 +280,17 @@ namespace HAL {
                     longPressCount++;
                     if (callback) {
                         callback(TouchEvent::LONG_PRESS);
+                    }
+                }
+            }
+            // Детекция TAP (отпускание после короткого нажатия)
+            else if (!touched && wasTouchedForTap) {
+                wasTouchedForTap = false;
+                unsigned long pressDuration = currentTime - tapPressStart;
+                if (pressDuration < config.longPressMs && !tapProcessed) {
+                    tapProcessed = true;
+                    if (callback) {
+                        callback(TouchEvent::TAP);
                     }
                 }
             }

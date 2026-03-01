@@ -51,6 +51,7 @@ private:
     WiFiStatus status;
     IPAddress ipAddress;
     unsigned long connectionStartTime;
+    unsigned long reconnectStartTime;
     bool connectionAttempted;
     
     // Callback для обновления статуса
@@ -66,6 +67,7 @@ public:
           status(WiFiStatus::DISCONNECTED),
           ipAddress(INADDR_NONE),
           connectionStartTime(0),
+          reconnectStartTime(0),
           connectionAttempted(false),
           statusCallback(nullptr) {}
 
@@ -259,10 +261,65 @@ public:
     }
 
     /**
-     * @brief Переподключение к WiFi
-     * @return true если успешно
+     * @brief Начать переподключение к WiFi (неблокирующее)
+     * @return true если процесс запущен
      */
     bool reconnect() {
+        if (status == WiFiStatus::CONNECTING) {
+            return false; // Уже в процессе переподключения
+        }
+        disconnect();
+        reconnectStartTime = millis();
+        status = WiFiStatus::CONNECTING;
+        connectionAttempted = true;
+        WiFi.begin(config.ssid, config.password);
+        Serial.println("WiFi: Reconnection started");
+        return true;
+    }
+
+    /**
+     * @brief Обработка процесса переподключения (вызывать в loop)
+     * @return true если подключились, false если ещё в процессе или ошибка
+     */
+    bool handleLoop() {
+        if (status != WiFiStatus::CONNECTING) {
+            return false;
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+            // Успешное подключение
+            ipAddress = WiFi.localIP();
+            status = WiFiStatus::CONNECTED;
+            Serial.println("\nWiFi: Reconnected!");
+            Serial.print("WiFi: IP address: ");
+            Serial.println(ipAddress);
+            return true;
+        }
+
+        // Проверка таймаута
+        if (millis() - reconnectStartTime > config.connectionTimeout) {
+            Serial.println("\nWiFi: Reconnection timeout");
+            status = WiFiStatus::FAILED;
+            return false;
+        }
+
+        // Проверка на ошибку
+        if (WiFi.status() == WL_CONNECT_FAILED) {
+            Serial.println("\nWiFi: Reconnection failed");
+            status = WiFiStatus::FAILED;
+            return false;
+        }
+
+        // Всё ещё в процессе
+        return false;
+    }
+
+    /**
+     * @brief Полное переподключение (блокирующее, для совместимости)
+     * @return true если успешно
+     * @deprecated Используйте reconnect() + processReconnect()
+     */
+    bool reconnectBlocking() {
         disconnect();
         delay(1000);
         return connect();
