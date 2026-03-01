@@ -455,7 +455,6 @@ void loop() {
 
     // Обработка Touch сенсора
     if (touch.isNewTouch()) {
-        Serial.println("Touch detected!");
         pageMgr.nextPage();
     }
 
