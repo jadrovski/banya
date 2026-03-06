@@ -1,5 +1,5 @@
-#ifndef SAUNA_COLOR_H
-#define SAUNA_COLOR_H
+#ifndef BANYA_COLOR_H
+#define BANYA_COLOR_H
 
 // Forward declarations
 class RGB;
@@ -21,4 +21,4 @@ public:
 };
 
 
-#endif //SAUNA_COLOR_H
+#endif //BANYA_COLOR_H

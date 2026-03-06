@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_DS18B20_H
-#define SAUNA_HAL_DS18B20_H
+#ifndef BANYA_HAL_DS18B20_H
+#define BANYA_HAL_DS18B20_H
 
 #include <Arduino.h>
 #include <OneWire.h>
@@ -329,4 +329,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_DS18B20_H
+#endif // BANYA_HAL_DS18B20_H

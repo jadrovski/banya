@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_PAGES_DALLAS_SENSORS_H
-#define SAUNA_HAL_PAGES_DALLAS_SENSORS_H
+#ifndef BANYA_HAL_PAGES_DALLAS_SENSORS_H
+#define BANYA_HAL_PAGES_DALLAS_SENSORS_H
 
 #include "../DisplayPage.h"
 #include "../DS18B20.h"
@@ -89,4 +89,4 @@ private:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_PAGES_DALLAS_SENSORS_H
+#endif // BANYA_HAL_PAGES_DALLAS_SENSORS_H

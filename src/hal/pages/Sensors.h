@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_PAGES_SENSORS_H
-#define SAUNA_HAL_PAGES_SENSORS_H
+#ifndef BANYA_HAL_PAGES_SENSORS_H
+#define BANYA_HAL_PAGES_SENSORS_H
 
 /**
  * @file Sensors.h
@@ -18,4 +18,4 @@
 #include "WiFiInfoPage.h"
 #include "LEDStripPage.h"
 
-#endif // SAUNA_HAL_PAGES_SENSORS_H
+#endif // BANYA_HAL_PAGES_SENSORS_H

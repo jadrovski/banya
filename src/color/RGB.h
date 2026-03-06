@@ -1,5 +1,5 @@
-#ifndef SAUNA_RGB_H
-#define SAUNA_RGB_H
+#ifndef BANYA_RGB_H
+#define BANYA_RGB_H
 #include "Arduino.h"
 #include "Color.h"
 
@@ -54,4 +54,4 @@ public:
 };
 
 
-#endif //SAUNA_RGB_H
+#endif //BANYA_RGB_H

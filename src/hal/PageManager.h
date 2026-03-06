@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_PAGE_MANAGER_H
-#define SAUNA_HAL_PAGE_MANAGER_H
+#ifndef BANYA_HAL_PAGE_MANAGER_H
+#define BANYA_HAL_PAGE_MANAGER_H
 
 #include <Arduino.h>
 #include <vector>
@@ -234,4 +234,4 @@ inline void drawPageIndicator(LCD& lcd, uint8_t current, uint8_t total) {
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_PAGE_MANAGER_H
+#endif // BANYA_HAL_PAGE_MANAGER_H

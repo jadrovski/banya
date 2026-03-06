@@ -1,8 +1,8 @@
-#ifndef SAUNA_LEDSTRIP_H
-#define SAUNA_LEDSTRIP_H
+#ifndef BANYA_LEDSTRIP_H
+#define BANYA_LEDSTRIP_H
 
 #include <Arduino.h>
-#include "color/SaunaColors.h"
+#include "color/BanyaColors.h"
 
 class TemperatureColor;
 
@@ -68,19 +68,19 @@ protected:
     virtual void updateHardware();
 };
 
-// Sauna-specific LED strip with temperature/humidity awareness
-class SaunaLEDStrip : public LEDStrip {
+// Banya-specific LED strip with temperature/humidity awareness
+class BanyaLEDStrip : public LEDStrip {
 private:
     float currentTemp;
     float currentHumidity;
 
 public:
-    SaunaLEDStrip(uint8_t pinR, uint8_t pinG, uint8_t pinB);
+    BanyaLEDStrip(uint8_t pinR, uint8_t pinG, uint8_t pinB);
 
     // Update environmental data
     void updateEnvironment(float temperatureC, float humidity);
 
-    // Sauna-specific modes
+    // Banya-specific modes
     void setTemperatureMode();
     void setHumidityMode();
     void setComfortMode();
@@ -101,4 +101,4 @@ private:
     RGB calculateSafetyColor() const;
 };
 
-#endif // SAUNA_LEDSTRIP_H
+#endif // BANYA_LEDSTRIP_H

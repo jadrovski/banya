@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_TOUCH_H
-#define SAUNA_HAL_TOUCH_H
+#ifndef BANYA_HAL_TOUCH_H
+#define BANYA_HAL_TOUCH_H
 
 #include <Arduino.h>
 #include <driver/touch_pad.h>
@@ -553,4 +553,4 @@ namespace HAL {
     };
 } // namespace HAL
 
-#endif // SAUNA_HAL_TOUCH_H
+#endif // BANYA_HAL_TOUCH_H

@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_PAGES_WIFI_INFO_H
-#define SAUNA_HAL_PAGES_WIFI_INFO_H
+#ifndef BANYA_HAL_PAGES_WIFI_INFO_H
+#define BANYA_HAL_PAGES_WIFI_INFO_H
 
 #include "../DisplayPage.h"
 #include "../WiFi.h"
@@ -73,4 +73,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_PAGES_WIFI_INFO_H
+#endif // BANYA_HAL_PAGES_WIFI_INFO_H

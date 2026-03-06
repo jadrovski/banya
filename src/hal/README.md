@@ -1,8 +1,8 @@
-# Hardware Access Layer (HAL) для Sauna Controller
+# Hardware Access Layer (HAL) для Banya Controller
 
 ## Обзор
 
-Hardware Access Layer (HAL) предоставляет абстрактный, конфигурируемый интерфейс для работы с оборудованием в проекте Sauna Controller. Все классы находятся в пространстве имён `HAL`.
+Hardware Access Layer (HAL) предоставляет абстрактный, конфигурируемый интерфейс для работы с оборудованием в проекте Banya Controller. Все классы находятся в пространстве имён `HAL`.
 
 ## Структура
 
@@ -245,7 +245,7 @@ void ledEffect() {
 ```cpp
 void displayStatus() {
     lcd.clear();
-    lcd.printAt(0, 0, "Sauna Controller");
+    lcd.printAt(0, 0, "Banya Controller");
     lcd.printAt(0, 1, "Temp: " + String(bme.getTemperature(), 1) + "C");
     lcd.printAt(0, 2, "Humidity: " + String(bme.getHumidity()) + "%");
     lcd.printAt(0, 3, "Pressure: " + String(bme.getPressure_mmHg()) + "mmHg");

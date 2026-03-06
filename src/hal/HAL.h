@@ -1,9 +1,9 @@
-#ifndef SAUNA_HAL_H
-#define SAUNA_HAL_H
+#ifndef BANYA_HAL_H
+#define BANYA_HAL_H
 
 /**
  * @file HAL.h
- * @brief Hardware Access Layer для проекта Sauna Controller
+ * @brief Hardware Access Layer для проекта Banya Controller
  * 
  * Этот файл предоставляет удобный способ импорта всех HAL-компонентов
  * 
@@ -16,7 +16,7 @@
  * HAL::DS18B20Manager ds18b20;
  * HAL::RGBLED led;
  * HAL::WiFiManager wifi;
- * HAL::SaunaWebServer webServer;
+ * HAL::BanyaWebServer webServer;
  * HAL::TouchSensor touch;
  * HAL::PageManager pageMgr;
  * 
@@ -42,4 +42,4 @@
 #include "hal/Touch.h"
 #include "hal/DisplayPages.h"
 
-#endif // SAUNA_HAL_H
+#endif // BANYA_HAL_H

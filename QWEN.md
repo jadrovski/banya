@@ -1,8 +1,8 @@
-# Sauna Controller - Project Context
+# Banya Controller - Project Context
 
 ## Project Overview
 
-This is an **ESP32-based Sauna Controller** project built with PlatformIO and the Arduino framework. It provides comprehensive monitoring and control of sauna environmental conditions with visual feedback through an RGB LED strip and a 20x4 LCD display.
+This is an **ESP32-based Banya Controller** project built with PlatformIO and the Arduino framework. It provides comprehensive monitoring and control of banya environmental conditions with visual feedback through an RGB LED strip and a 20x4 LCD display.
 
 ### Hardware Components
 
@@ -40,13 +40,13 @@ src/
     ├── HSV.h/.cpp        # HSV color model
     ├── HSL.h/.cpp        # HSL color model
     ├── TemperatureColor.h/.cpp  # Color from temperature (Kelvin/Celsius)
-    └── SaunaColors.h     # Preset colors for sauna states
+    └── BanyaColors.h     # Preset colors for banya states
 ```
 
 ### Key Classes
 
 - **`LEDStrip`**: Low-level PWM control for RGB LEDs with gamma correction (2.2), brightness control, and basic effects
-- **`SaunaLEDStrip`**: Extends `LEDStrip` with sauna-specific modes (temperature, humidity, comfort, safety, relax)
+- **`BanyaLEDStrip`**: Extends `LEDStrip` with banya-specific modes (temperature, humidity, comfort, safety, relax)
 - **`LEDStripController`**: Manages animated effects (fade, blink, pulse, rainbow) with timing
 - **Color Models**: `RGB`, `HSV`, `HSL`, `TemperatureColor` - all convertible via the `Color` base class
 
@@ -105,9 +105,9 @@ pio test
 ### Code Style
 
 - **File naming**: PascalCase for classes (e.g., `LEDController.h`, `LEDStrip.cpp`)
-- **Namespaces**: `SaunaColors` namespace for color presets
+- **Namespaces**: `BanyaColors` namespace for color presets
 - **Includes**: Use quotes for local headers, angle brackets for libraries
-- **Guard macros**: `#ifndef SAUNA_<NAME>_H` format for header guards
+- **Guard macros**: `#ifndef BANYA_<NAME>_H` format for header guards
 
 ### Color System
 

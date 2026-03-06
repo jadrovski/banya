@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_BME280_H
-#define SAUNA_HAL_BME280_H
+#ifndef BANYA_HAL_BME280_H
+#define BANYA_HAL_BME280_H
 
 #include <Arduino.h>
 #include <Adafruit_BME280.h>
@@ -212,4 +212,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_BME280_H
+#endif // BANYA_HAL_BME280_H

@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_WEBSERVER_H
-#define SAUNA_HAL_WEBSERVER_H
+#ifndef BANYA_HAL_WEBSERVER_H
+#define BANYA_HAL_WEBSERVER_H
 
 #include <Arduino.h>
 #include <WebServer.h>
@@ -19,7 +19,7 @@ struct WebServerConfig {
 /**
  * @brief Данные статуса для веб-интерфейса
  */
-struct SaunaStatus {
+struct BanyaStatus {
     float temp1;          // Температура DS18B20 #1
     float temp2;          // Температура DS18B20 #2
     float temp3;          // Температура BME280
@@ -31,23 +31,23 @@ struct SaunaStatus {
     String wifiStatus;
     String mode;
     
-    SaunaStatus() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
+    BanyaStatus() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
                    sensor1Connected(false), sensor2Connected(false) {}
 };
 
 /**
- * @brief Веб-сервер для Sauna Controller
+ * @brief Веб-сервер для Banya Controller
  * 
  * Предоставляет:
  * - HTML страницу со статусом сауны
  * - JSON API для получения данных
  * - Автоматическое обновление данных
  */
-class SaunaWebServer {
+class BanyaWebServer {
 private:
     WebServerConfig config;
     std::unique_ptr<WebServer> server;
-    std::function<SaunaStatus()> statusProvider;
+    std::function<BanyaStatus()> statusProvider;
     bool running;
 
 public:
@@ -55,10 +55,10 @@ public:
      * @brief Конструктор веб-сервера
      * @param cfg Конфигурация
      */
-    explicit SaunaWebServer(const WebServerConfig& cfg = WebServerConfig())
+    explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig())
         : config(cfg), server(nullptr), statusProvider(nullptr), running(false) {}
 
-    ~SaunaWebServer() {
+    ~BanyaWebServer() {
         stop();
     }
 
@@ -70,10 +70,10 @@ public:
         server = std::unique_ptr<WebServer>(new WebServer(config.port));
         
         // Регистрация обработчиков
-        server->on("/", std::bind(&SaunaWebServer::handleRoot, this));
-        server->on("/status", std::bind(&SaunaWebServer::handleStatus, this));
-        server->on("/style.css", std::bind(&SaunaWebServer::handleStyle, this));
-        server->onNotFound(std::bind(&SaunaWebServer::handleNotFound, this));
+        server->on("/", std::bind(&BanyaWebServer::handleRoot, this));
+        server->on("/status", std::bind(&BanyaWebServer::handleStatus, this));
+        server->on("/style.css", std::bind(&BanyaWebServer::handleStyle, this));
+        server->onNotFound(std::bind(&BanyaWebServer::handleNotFound, this));
         
         running = true;
         return true;
@@ -111,9 +111,9 @@ public:
 
     /**
      * @brief Установить провайдер статуса
-     * @param provider Функция, возвращающая SaunaStatus
+     * @param provider Функция, возвращающая BanyaStatus
      */
-    void setStatusProvider(std::function<SaunaStatus()> provider) {
+    void setStatusProvider(std::function<BanyaStatus()> provider) {
         statusProvider = provider;
     }
 
@@ -136,7 +136,7 @@ private:
      */
     void handleStatus() {
         if (statusProvider) {
-            SaunaStatus status = statusProvider();
+            BanyaStatus status = statusProvider();
             
             String json = "{";
             json += "\"temp1\":" + String(status.temp1, 1) + ",";
@@ -180,12 +180,12 @@ private:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sauna Controller</title>
+    <title>Banya Controller</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>🧖 Sauna Controller</h1>
+        <h1>🧖 Banya Controller</h1>
         
         <div class="status-bar">
             <span id="wifi-status">WiFi: --</span>
@@ -423,4 +423,4 @@ h1 {
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_WEBSERVER_H
+#endif // BANYA_HAL_WEBSERVER_H

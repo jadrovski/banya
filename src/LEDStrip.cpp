@@ -163,42 +163,42 @@ void LEDStrip::updateHardware() {
     writeToPWM(currentColor.red, currentColor.green, currentColor.blue);
 }
 
-// SaunaLEDStrip implementation
-SaunaLEDStrip::SaunaLEDStrip(uint8_t pinR, uint8_t pinG, uint8_t pinB)
+// BanyaLEDStrip implementation
+BanyaLEDStrip::BanyaLEDStrip(uint8_t pinR, uint8_t pinG, uint8_t pinB)
     : LEDStrip(pinR, pinG, pinB),
       currentTemp(25.0),
       currentHumidity(50.0) {
 }
 
-void SaunaLEDStrip::updateEnvironment(const float temperatureC, const float humidity) {
+void BanyaLEDStrip::updateEnvironment(const float temperatureC, const float humidity) {
     currentTemp = temperatureC;
     currentHumidity = constrain(humidity, 0.0f, 100.0f);
 }
 
-void SaunaLEDStrip::setTemperatureMode() {
+void BanyaLEDStrip::setTemperatureMode() {
     setColor(calculateTemperatureColor());
 }
 
-void SaunaLEDStrip::setHumidityMode() {
+void BanyaLEDStrip::setHumidityMode() {
     setColor(calculateHumidityColor());
 }
 
-void SaunaLEDStrip::setComfortMode() {
+void BanyaLEDStrip::setComfortMode() {
     setColor(calculateComfortColor());
 }
 
-void SaunaLEDStrip::setSafetyMode() {
+void BanyaLEDStrip::setSafetyMode() {
     setColor(calculateSafetyColor());
 }
 
-void SaunaLEDStrip::setRelaxMode() {
+void BanyaLEDStrip::setRelaxMode() {
     // Slow color cycle for relaxation
     float hue = fmod(millis() * 0.01, 360.0);
     HSV relaxedColor(hue, 0.7, 0.5);
     setColor(relaxedColor);
 }
 
-void SaunaLEDStrip::setAutoMode() {
+void BanyaLEDStrip::setAutoMode() {
     // Automatic mode selection based on conditions
     if (currentTemp > 90 || currentHumidity > 70) {
         setSafetyMode();
@@ -211,7 +211,7 @@ void SaunaLEDStrip::setAutoMode() {
     }
 }
 
-RGB SaunaLEDStrip::calculateTemperatureColor() const {
+RGB BanyaLEDStrip::calculateTemperatureColor() const {
     // Map temperature to color (cold blue to hot red)
     float temp = constrain(currentTemp, 50.0f, 100.0f);
     float ratio = (temp - 50) / 50.0f;
@@ -228,32 +228,32 @@ RGB SaunaLEDStrip::calculateTemperatureColor() const {
     }
 }
 
-RGB SaunaLEDStrip::calculateHumidityColor() const {
+RGB BanyaLEDStrip::calculateHumidityColor() const {
     // Humidity affects blue/white level
     float humidityRatio = currentHumidity / 100.0;
     return RGB(200 * humidityRatio, 200 * humidityRatio, 255);
 }
 
-RGB SaunaLEDStrip::calculateComfortColor() const {
+RGB BanyaLEDStrip::calculateComfortColor() const {
     // Simple heat index
     float heatIndex = currentTemp + 0.1 * currentHumidity;
     
-    if (heatIndex < 60) return SaunaColors::comfortable();
-    else if (heatIndex < 70) return SaunaColors::calm();
-    else if (heatIndex < 80) return SaunaColors::warm();
-    else return SaunaColors::warning();
+    if (heatIndex < 60) return BanyaColors::comfortable();
+    else if (heatIndex < 70) return BanyaColors::calm();
+    else if (heatIndex < 80) return BanyaColors::warm();
+    else return BanyaColors::warning();
 }
 
-RGB SaunaLEDStrip::calculateSafetyColor() const {
+RGB BanyaLEDStrip::calculateSafetyColor() const {
     // Safety warning colors
     if (currentTemp > 95 || currentHumidity > 80) {
         // Critical - flashing handled by controller
-        return SaunaColors::danger();
+        return BanyaColors::danger();
     } else if (currentTemp > 90 || currentHumidity > 70) {
         // Warning
-        return SaunaColors::warning();
+        return BanyaColors::warning();
     } else {
         // Safe
-        return SaunaColors::comfortable();
+        return BanyaColors::comfortable();
     }
 }

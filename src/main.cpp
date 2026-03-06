@@ -5,7 +5,7 @@
 #include "hal/pages/LEDStripPage.h"
 #include "LEDController.h"
 #include "LEDStrip.h"
-#include "color/SaunaColors.h"
+#include "color/BanyaColors.h"
 
 // ============================================================================
 // Конфигурация оборудования
@@ -81,7 +81,7 @@ HAL::RGBLED ledStrip(ledConfig);
 // WiFi и веб-сервер
 HAL::WiFiConfig wifiConfig(WIFI_SSID, WIFI_PASSWORD, 15000, true);
 HAL::WiFiManager wifi(wifiConfig);
-HAL::SaunaWebServer webServer;
+HAL::BanyaWebServer webServer;
 
 // Touch сенсор
 HAL::TouchConfig touchConfig(
@@ -103,14 +103,14 @@ HAL::DisplayPage *wifiPage = nullptr;
 HAL::SystemStatusPage *statusPage = nullptr;
 HAL::LEDStripPage *ledStripPage = nullptr;
 
-// Sauna-specific LED strip controller
+// Banya-specific LED strip controller
 LEDStripController *pLedController = nullptr;
 
 // ============================================================================
 // Режимы работы
 // ============================================================================
 
-enum SaunaMode {
+enum BanyaMode {
     MODE_AUTO,
     MODE_TEMPERATURE,
     MODE_HUMIDITY,
@@ -120,7 +120,7 @@ enum SaunaMode {
     MODE_MANUAL
 };
 
-SaunaMode currentMode = MODE_AUTO;
+BanyaMode currentMode = MODE_AUTO;
 
 // ============================================================================
 // Функции LCD
@@ -142,8 +142,8 @@ void displayWelcome() {
 // Провайдер статуса для веб-сервера
 // ============================================================================
 
-HAL::SaunaStatus getSaunaStatus() {
-    HAL::SaunaStatus status;
+HAL::BanyaStatus getBanyaStatus() {
+    HAL::BanyaStatus status;
 
     // Температуры (DS18B20 обновляется автоматически в loop())
     status.temp1 = ds18b20.getTemperature(0);
@@ -288,7 +288,7 @@ void handleSerialCommands() {
 
             // Эффекты
             case 'P':
-                pLedController->startPulse(SaunaColors::fire(), 3000);
+                pLedController->startPulse(BanyaColors::fire(), 3000);
                 Serial.println("Effect: Pulse");
                 break;
             case 'Q':
@@ -296,7 +296,7 @@ void handleSerialCommands() {
                 Serial.println("Effect: Rainbow");
                 break;
             case 'B':
-                pLedController->startBlink(SaunaColors::ice(), 200, 200, 10);
+                pLedController->startBlink(BanyaColors::ice(), 200, 200, 10);
                 Serial.println("Effect: Blink");
                 break;
             case 'X':
@@ -361,7 +361,7 @@ void handleSerialCommands() {
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n=== Sauna Controller HAL ===");
+    Serial.println("\n=== Banya Controller HAL ===");
 
     // Инициализация LCD
     Serial.print("Initializing LCD... ");
@@ -421,7 +421,7 @@ void setup() {
     if (wifi.connect()) {
         // Запуск веб-сервера
         webServer.begin();
-        webServer.setStatusProvider(getSaunaStatus);
+        webServer.setStatusProvider(getBanyaStatus);
         webServer.start();
 
         String ip = wifi.getIPAddressString();

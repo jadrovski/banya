@@ -1,10 +1,10 @@
-#ifndef SAUNA_COLORMODEL_H
-#define SAUNA_COLORMODEL_H
+#ifndef BANYA_COLORMODEL_H
+#define BANYA_COLORMODEL_H
 
 #include "RGB.h"
 
-// Color presets for sauna
-namespace SaunaColors {
+// Color presets for banya
+namespace BanyaColors {
     // Temperature-based colors
     static RGB cold() { return {100, 150, 255}; } // Cool blue
     static RGB warm() { return {255, 150, 50}; } // Warm orange
@@ -26,4 +26,4 @@ namespace SaunaColors {
     static RGB ice() { return {100, 200, 255}; } // Ice blue
 }
 
-#endif // SAUNA_COLORMODEL_H
+#endif // BANYA_COLORMODEL_H

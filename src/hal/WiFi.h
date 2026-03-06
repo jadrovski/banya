@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_WIFI_H
-#define SAUNA_HAL_WIFI_H
+#ifndef BANYA_HAL_WIFI_H
+#define BANYA_HAL_WIFI_H
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -359,4 +359,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_WIFI_H
+#endif // BANYA_HAL_WIFI_H

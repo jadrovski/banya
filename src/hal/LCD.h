@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_LCD_H
-#define SAUNA_HAL_LCD_H
+#ifndef BANYA_HAL_LCD_H
+#define BANYA_HAL_LCD_H
 
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
@@ -414,4 +414,4 @@ namespace HAL {
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_LCD_H
+#endif // BANYA_HAL_LCD_H

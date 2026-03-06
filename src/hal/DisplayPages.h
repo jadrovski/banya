@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_DISPLAY_PAGES_H
-#define SAUNA_HAL_DISPLAY_PAGES_H
+#ifndef BANYA_HAL_DISPLAY_PAGES_H
+#define BANYA_HAL_DISPLAY_PAGES_H
 
 /**
  * @file DisplayPages.h
@@ -14,4 +14,4 @@
 #include "DisplayPage.h"
 #include "PageManager.h"
 
-#endif // SAUNA_HAL_DISPLAY_PAGES_H
+#endif // BANYA_HAL_DISPLAY_PAGES_H

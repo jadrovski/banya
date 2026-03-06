@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_I2C_DEVICE_H
-#define SAUNA_HAL_I2C_DEVICE_H
+#ifndef BANYA_HAL_I2C_DEVICE_H
+#define BANYA_HAL_I2C_DEVICE_H
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -74,4 +74,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_I2C_DEVICE_H
+#endif // BANYA_HAL_I2C_DEVICE_H

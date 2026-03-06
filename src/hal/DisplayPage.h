@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_DISPLAY_PAGE_H
-#define SAUNA_HAL_DISPLAY_PAGE_H
+#ifndef BANYA_HAL_DISPLAY_PAGE_H
+#define BANYA_HAL_DISPLAY_PAGE_H
 
 #include <Arduino.h>
 #include "LCD.h"
@@ -73,4 +73,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_DISPLAY_PAGE_H
+#endif // BANYA_HAL_DISPLAY_PAGE_H

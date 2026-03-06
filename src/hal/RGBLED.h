@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_RGBLED_H
-#define SAUNA_HAL_RGBLED_H
+#ifndef BANYA_HAL_RGBLED_H
+#define BANYA_HAL_RGBLED_H
 
 #include <Arduino.h>
 #include "I2CDevice.h"
@@ -378,4 +378,4 @@ protected:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_RGBLED_H
+#endif // BANYA_HAL_RGBLED_H

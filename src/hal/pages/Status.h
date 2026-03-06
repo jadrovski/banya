@@ -1,9 +1,9 @@
-#ifndef SAUNA_HAL_PAGES_STATUS_H
-#define SAUNA_HAL_PAGES_STATUS_H
+#ifndef BANYA_HAL_PAGES_STATUS_H
+#define BANYA_HAL_PAGES_STATUS_H
 
 #include "../DisplayPage.h"
 #include "../WiFi.h"
-#include "../../color/SaunaColors.h"
+#include "../../color/BanyaColors.h"
 
 namespace HAL {
 
@@ -78,4 +78,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_PAGES_STATUS_H
+#endif // BANYA_HAL_PAGES_STATUS_H

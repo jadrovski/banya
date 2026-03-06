@@ -1,5 +1,5 @@
-#ifndef SAUNA_TEMPERATURECOLOR_H
-#define SAUNA_TEMPERATURECOLOR_H
+#ifndef BANYA_TEMPERATURECOLOR_H
+#define BANYA_TEMPERATURECOLOR_H
 #include "Arduino.h"
 #include "Color.h"
 
@@ -48,4 +48,4 @@ public:
     static TemperatureColor shade() { return TemperatureColor(9000); }
 };
 
-#endif //SAUNA_TEMPERATURECOLOR_H
+#endif //BANYA_TEMPERATURECOLOR_H

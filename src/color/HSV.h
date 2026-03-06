@@ -1,5 +1,5 @@
-#ifndef SAUNA_HSV_H
-#define SAUNA_HSV_H
+#ifndef BANYA_HSV_H
+#define BANYA_HSV_H
 #include "Arduino.h"
 #include "Color.h"
 
@@ -45,4 +45,4 @@ public:
     String toString() const override;
 };
 
-#endif //SAUNA_HSV_H
+#endif //BANYA_HSV_H

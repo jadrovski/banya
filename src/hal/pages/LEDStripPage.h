@@ -1,5 +1,5 @@
-#ifndef SAUNA_HAL_PAGES_LEDSTRIP_H
-#define SAUNA_HAL_PAGES_LEDSTRIP_H
+#ifndef BANYA_HAL_PAGES_LEDSTRIP_H
+#define BANYA_HAL_PAGES_LEDSTRIP_H
 
 #include "../DisplayPage.h"
 #include "../RGBLED.h"
@@ -113,4 +113,4 @@ public:
 
 } // namespace HAL
 
-#endif // SAUNA_HAL_PAGES_LEDSTRIP_H
+#endif // BANYA_HAL_PAGES_LEDSTRIP_H

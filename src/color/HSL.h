@@ -1,5 +1,5 @@
-#ifndef SAUNA_HSL_H
-#define SAUNA_HSL_H
+#ifndef BANYA_HSL_H
+#define BANYA_HSL_H
 
 #include "Color.h"
 
@@ -44,4 +44,4 @@ public:
 };
 
 
-#endif //SAUNA_HSL_H
+#endif //BANYA_HSL_H

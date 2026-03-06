@@ -1,5 +1,5 @@
-#ifndef SAUNA_LEDCONTROLLER_H
-#define SAUNA_LEDCONTROLLER_H
+#ifndef BANYA_LEDCONTROLLER_H
+#define BANYA_LEDCONTROLLER_H
 #include "color/RGB.h"
 
 namespace HAL {
@@ -54,4 +54,4 @@ private:
 };
 
 
-#endif //SAUNA_LEDCONTROLLER_H
+#endif //BANYA_LEDCONTROLLER_H
