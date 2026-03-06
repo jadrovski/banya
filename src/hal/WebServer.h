@@ -48,6 +48,8 @@ private:
     WebServerConfig config;
     std::unique_ptr<WebServer> server;
     std::function<BanyaStatus()> statusProvider;
+    std::function<RGB()> getLedColor;
+    std::function<void(RGB)> setLedColor;
     bool running;
 
 public:
@@ -56,7 +58,7 @@ public:
      * @param cfg Конфигурация
      */
     explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig())
-        : config(cfg), server(nullptr), statusProvider(nullptr), running(false) {}
+        : config(cfg), server(nullptr), statusProvider(nullptr), getLedColor(nullptr), setLedColor(nullptr), running(false) {}
 
     ~BanyaWebServer() {
         stop();
@@ -68,13 +70,16 @@ public:
      */
     bool begin() {
         server = std::unique_ptr<WebServer>(new WebServer(config.port));
-        
+
         // Регистрация обработчиков
         server->on("/", std::bind(&BanyaWebServer::handleRoot, this));
         server->on("/status", std::bind(&BanyaWebServer::handleStatus, this));
         server->on("/style.css", std::bind(&BanyaWebServer::handleStyle, this));
+        server->on("/led", std::bind(&BanyaWebServer::handleLEDPage, this));
+        server->on("/led/status", std::bind(&BanyaWebServer::handleLEDStatus, this));
+        server->on("/led/set", std::bind(&BanyaWebServer::handleLEDSet, this));
         server->onNotFound(std::bind(&BanyaWebServer::handleNotFound, this));
-        
+
         running = true;
         return true;
     }
@@ -115,6 +120,16 @@ public:
      */
     void setStatusProvider(std::function<BanyaStatus()> provider) {
         statusProvider = provider;
+    }
+
+    /**
+     * @brief Установить функции для управления LED
+     * @param getColor Функция получения текущего цвета
+     * @param setColor Функция установки цвета
+     */
+    void setLEDControl(std::function<RGB()> getColor, std::function<void(RGB)> setColor) {
+        getLedColor = getColor;
+        setLedColor = setColor;
     }
 
     /**
@@ -161,6 +176,46 @@ private:
      */
     void handleStyle() {
         server->send(200, "text/css", getCSS());
+    }
+
+    /**
+     * @brief Обработка страницы LED настроек
+     */
+    void handleLEDPage() {
+        String html = getLEDPageHTML();
+        server->send(200, "text/html", html);
+    }
+
+    /**
+     * @brief Обработка запроса статуса LED
+     */
+    void handleLEDStatus() {
+        if (getLedColor) {
+            RGB color = getLedColor();
+            String json = "{";
+            json += "\"r\":" + String(color.red) + ",";
+            json += "\"g\":" + String(color.green) + ",";
+            json += "\"b\":" + String(color.blue);
+            json += "}";
+            server->send(200, "application/json", json);
+        } else {
+            server->send(500, "application/json", "{\"error\":\"No LED control\"}");
+        }
+    }
+
+    /**
+     * @brief Обработка запроса установки LED цвета
+     */
+    void handleLEDSet() {
+        if (setLedColor && server->hasArg("r") && server->hasArg("g") && server->hasArg("b")) {
+            uint8_t r = server->arg("r").toInt();
+            uint8_t g = server->arg("g").toInt();
+            uint8_t b = server->arg("b").toInt();
+            setLedColor(RGB(r, g, b));
+            server->send(200, "application/json", "{\"success\":true}");
+        } else {
+            server->send(400, "application/json", "{\"error\":\"Invalid request\"}");
+        }
     }
 
     /**
@@ -232,6 +287,7 @@ private:
         <div class="footer">
             <p>Last update: <span id="last-update">--:--:--</span></p>
             <p>Auto-refresh: <span id="refresh-status">ON</span></p>
+            <p><a href="/led" class="nav-link">🎨 LED Settings</a></p>
         </div>
     </div>
     
@@ -418,6 +474,257 @@ h1 {
 }
 )rawliteral";
         return css;
+    }
+
+    /**
+     * @brief Генерация HTML страницы LED настроек
+     */
+    String getLEDPageHTML() {
+        String html = R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Settings - Banya Controller</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .led-controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .slider-group {
+            margin-bottom: 25px;
+        }
+
+        .slider-group label {
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #00d9ff;
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-runnable-track {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+
+        .slider-group.red input[type="range"]::-webkit-slider-thumb {
+            background: #ff3232;
+        }
+
+        .slider-group.green input[type="range"]::-webkit-slider-thumb {
+            background: #00ff64;
+        }
+
+        .slider-group.blue input[type="range"]::-webkit-slider-thumb {
+            background: #00d9ff;
+        }
+
+        .slider-value {
+            text-align: right;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 5px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .color-preview {
+            width: 100%;
+            height: 100px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #00d9ff, #00ff64);
+            color: #1a1a2e;
+        }
+
+        .btn-off {
+            background: rgba(255, 50, 50, 0.3);
+            color: #ff3232;
+            border: 1px solid rgba(255, 50, 50, 0.5);
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-link {
+            color: #00d9ff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #00ff64;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 LED Settings</h1>
+
+        <div class="color-preview" id="colorPreview"></div>
+
+        <div class="led-controls">
+            <div class="slider-group red">
+                <label>🔴 Red</label>
+                <input type="range" id="redSlider" min="0" max="255" value="0">
+                <div class="slider-value" id="redValue">0</div>
+            </div>
+
+            <div class="slider-group green">
+                <label>🟢 Green</label>
+                <input type="range" id="greenSlider" min="0" max="255" value="0">
+                <div class="slider-value" id="greenValue">0</div>
+            </div>
+
+            <div class="slider-group blue">
+                <label>🔵 Blue</label>
+                <input type="range" id="blueSlider" min="0" max="255" value="0">
+                <div class="slider-value" id="blueValue">0</div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-back" onclick="window.location.href='/'">⬅ Back</button>
+                <button class="btn btn-off" onclick="setLED(0, 0, 0)">Turn Off</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentR = 0, currentG = 0, currentB = 0;
+
+        // Загрузка текущих значений
+        function loadLEDStatus() {
+            fetch('/led/status')
+                .then(response => response.json())
+                .then(data => {
+                    currentR = data.r;
+                    currentG = data.g;
+                    currentB = data.b;
+
+                    document.getElementById('redSlider').value = currentR;
+                    document.getElementById('greenSlider').value = currentG;
+                    document.getElementById('blueSlider').value = currentB;
+
+                    document.getElementById('redValue').textContent = currentR;
+                    document.getElementById('greenValue').textContent = currentG;
+                    document.getElementById('blueValue').textContent = currentB;
+
+                    updatePreview();
+                })
+                .catch(error => {
+                    console.error('Error loading LED status:', error);
+                });
+        }
+
+        // Обновление предпросмотра цвета
+        function updatePreview() {
+            const r = document.getElementById('redSlider').value;
+            const g = document.getElementById('greenSlider').value;
+            const b = document.getElementById('blueSlider').value;
+
+            document.getElementById('redValue').textContent = r;
+            document.getElementById('greenValue').textContent = g;
+            document.getElementById('blueValue').textContent = b;
+
+            document.getElementById('colorPreview').style.backgroundColor = 
+                'rgb(' + r + ', ' + g + ', ' + b + ')';
+        }
+
+        // Установка цвета на сервер
+        function setLED(r, g, b) {
+            fetch('/led/set?r=' + r + '&g=' + g + '&b=' + b)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentR = r;
+                        currentG = g;
+                        currentB = b;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error setting LED:', error);
+                });
+        }
+
+        // Обработчики изменений слайдеров (применение цвета)
+        document.getElementById('redSlider').addEventListener('input', function() {
+            updatePreview();
+            setLED(this.value, document.getElementById('greenSlider').value, document.getElementById('blueSlider').value);
+        });
+        document.getElementById('greenSlider').addEventListener('input', function() {
+            updatePreview();
+            setLED(document.getElementById('redSlider').value, this.value, document.getElementById('blueSlider').value);
+        });
+        document.getElementById('blueSlider').addEventListener('input', function() {
+            updatePreview();
+            setLED(document.getElementById('redSlider').value, document.getElementById('greenSlider').value, this.value);
+        });
+
+        // Загрузка при старте
+        loadLEDStatus();
+    </script>
+</body>
+</html>
+)rawliteral";
+        return html;
     }
 };
 
