@@ -93,6 +93,9 @@ public:
         server->on("/wifi/ap-enable", std::bind(&BanyaWebServer::handleEnableAP, this));
         server->on("/wifi/ap-disable", std::bind(&BanyaWebServer::handleDisableAP, this));
         
+        // System endpoints
+        server->on("/reboot", std::bind(&BanyaWebServer::handleReboot, this));
+
         server->onNotFound(std::bind(&BanyaWebServer::handleNotFound, this));
 
         running = true;
@@ -290,16 +293,30 @@ private:
         }
 
         Serial.println("WiFi: Scanning networks...");
-        
-        // Переключаем в режим STA если нужно
+
+        // Сохраняем текущий режим WiFi
+        bool wasAPEnabled = wifiManager->isAPEnabled();
+
+        // Переключаем в режим STA для сканирования
         WiFi.mode(WIFI_STA);
-        
-        int n = WiFi.scanNetworks();
+
+        // Синхронное сканирование с таймаутом
+        int n = WiFi.scanNetworks(false, false, false, 5000);
+
         Serial.print("WiFi: Found ");
         Serial.print(n);
         Serial.println(" networks");
 
-        if (n == 0) {
+        // Восстанавливаем AP режим если он был включён
+        if (wasAPEnabled) {
+            Serial.println("WiFi: Restoring AP mode...");
+            delay(10);  // Короткая задержка перед переключением
+            WiFi.mode(WIFI_AP_STA);
+            // Перезапускаем softAP чтобы восстановить состояние
+            wifiManager->enableAP(wifiManager->getAPConfig());
+        }
+
+        if (n <= 0) {
             server->send(200, "application/json", "[]");
         } else {
             String json = "[";
@@ -347,6 +364,16 @@ private:
         } else {
             server->send(400, "application/json", "{\"error\":\"Missing ssid or password\"}");
         }
+    }
+
+    /**
+     * @brief Обработка перезагрузки устройства
+     */
+    void handleReboot() {
+        Serial.println("System: Reboot requested via web interface");
+        server->send(200, "application/json", "{\"success\":true,\"message\":\"Rebooting...\"}");
+        delay(100); // Даем время на отправку ответа
+        ESP.restart();
     }
 
     /**
@@ -1287,11 +1314,18 @@ h1 {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showStatus('Saved! Device will reboot...', 'success');
+                    showStatus('Saved! Rebooting...', 'success');
+                    // Reboot the device after saving
                     setTimeout(() => {
-                        // Перезагрузка не нужна, просто применяем новые настройки
-                        showStatus('WiFi credentials saved successfully!', 'success');
-                    }, 2000);
+                        fetch('/reboot')
+                            .then(() => {
+                                showStatus('Device is rebooting...', 'info');
+                            })
+                            .catch(error => {
+                                // Reboot may have interrupted the response, this is expected
+                                showStatus('Saved! Device is rebooting...', 'success');
+                            });
+                    }, 1000);
                 } else {
                     showStatus('Failed to save: ' + (data.error || 'Unknown error'), 'error');
                 }

@@ -460,7 +460,7 @@ void setup() {
     Serial.print("Initializing WiFi Settings (NVS)... ");
     if (wifiSettings.begin()) {
         Serial.println("OK");
-        
+
         // Загружаем credentials из NVS
         if (wifiSettings.isConfigured()) {
             HAL::WiFiCredentials creds = wifiSettings.getCredentials();
@@ -470,16 +470,25 @@ void setup() {
             Serial.print("WiFi Settings: Loaded from NVS - SSID: ");
             Serial.println(creds.ssid);
         } else {
-            // Если нет настроек в NVS, используем из wifi.ini
+            // Если нет настроек в NVS, используем из wifi.ini и сохраняем
             wifiConfig.ssid = WIFI_SSID;
             wifiConfig.password = WIFI_PASSWORD;
             Serial.println("WiFi Settings: Using build-time credentials");
+            
+            // Сохраняем build-time credentials в NVS для будущих загрузок
+            Serial.println("WiFi Settings: Saving to NVS...");
+            if (wifiSettings.save(WIFI_SSID, WIFI_PASSWORD, true)) {
+                Serial.println("WiFi Settings: Saved to NVS successfully");
+            } else {
+                Serial.println("WiFi Settings: Failed to save to NVS");
+            }
         }
     } else {
         Serial.println("FAILED");
         // Используем credentials из build flags
         wifiConfig.ssid = WIFI_SSID;
         wifiConfig.password = WIFI_PASSWORD;
+        Serial.println("WiFi Settings: Fallback to build-time credentials");
     }
 
     // Инициализация WiFi
@@ -488,6 +497,9 @@ void setup() {
     } else {
         Serial.println("FAILED");
     }
+
+    // Update WiFi credentials before connecting
+    wifi.setCredentials(wifiConfig.ssid, wifiConfig.password);
 
     // Подключение к WiFi
     lcd.clear();
