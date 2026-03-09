@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "hal/HAL.h"
 #include "hal/pages/Sensors.h"
-#include "hal/pages/Status.h"
+#include "hal/pages/SystemStatusPage.h"
 #include "hal/pages/LEDStripPage.h"
 #include "hal/pages/WiFiSetupPage.h"
 #include "LEDController.h"
@@ -212,7 +212,7 @@ void handleTouchCallback(HAL::TouchEvent event) {
 
             // Переходим на страницу настройки WiFi
             if (wifiSetupPage) {
-                pageMgr.goToPage(3); // WiFi Setup page is last
+                pageMgr.goToPage(4);
                 pageMgr.render();
             }
             break;
@@ -520,10 +520,10 @@ void setup() {
     // Добавление страниц в менеджер
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(dallasPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(bmePage));
+    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(ledStripPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiSetupPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(statusPage));
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(ledStripPage));
 
     pageMgr.begin(&lcd);
 
