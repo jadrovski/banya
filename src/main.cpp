@@ -466,7 +466,7 @@ void setup() {
             HAL::WiFiCredentials creds = wifiSettings.getCredentials();
             wifiConfig.ssid = strdup(creds.ssid.c_str());
             wifiConfig.password = strdup(creds.password.c_str());
-            wifiConfig.autoReconnect = creds.autoConnect;
+            wifiConfig.autoReconnect = true;
             Serial.print("WiFi Settings: Loaded from NVS - SSID: ");
             Serial.println(creds.ssid);
         } else {
@@ -474,10 +474,10 @@ void setup() {
             wifiConfig.ssid = WIFI_SSID;
             wifiConfig.password = WIFI_PASSWORD;
             Serial.println("WiFi Settings: Using build-time credentials");
-            
+
             // Сохраняем build-time credentials в NVS для будущих загрузок
             Serial.println("WiFi Settings: Saving to NVS...");
-            if (wifiSettings.save(WIFI_SSID, WIFI_PASSWORD, true)) {
+            if (wifiSettings.save(WIFI_SSID, WIFI_PASSWORD)) {
                 Serial.println("WiFi Settings: Saved to NVS successfully");
             } else {
                 Serial.println("WiFi Settings: Failed to save to NVS");

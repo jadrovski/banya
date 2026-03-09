@@ -12,13 +12,12 @@ namespace HAL {
     struct WiFiCredentials {
         String ssid;
         String password;
-        bool autoConnect;
 
-        WiFiCredentials() : ssid(""), password(""), autoConnect(true) {
+        WiFiCredentials() : ssid(""), password("") {
         }
 
-        WiFiCredentials(const String &s, const String &p, bool autoC = true)
-            : ssid(s), password(p), autoConnect(autoC) {
+        WiFiCredentials(const String &s, const String &p)
+            : ssid(s), password(p) {
         }
     };
 
@@ -169,17 +168,6 @@ namespace HAL {
                 return false;
             }
 
-            // Сохраняем флаг авто-подключения
-            ret = preferences.putBool("auto", creds.autoConnect);
-            if (ret > 0) {
-                Serial.print("WiFiSettings: Saved auto-connect: ");
-                Serial.println(creds.autoConnect ? "Yes" : "No");
-            } else {
-                Serial.print("WiFiSettings: Failed to save auto-connect, error: ");
-                Serial.println(ret);
-                return false;
-            }
-
             // Preferences auto-commits, but verify the save
             configured = checkConfigured();
             Serial.print("WiFiSettings: configured flag after save = ");
@@ -193,11 +181,10 @@ namespace HAL {
          * @brief Сохранить credentials (удобная версия)
          * @param ssid SSID сети
          * @param password Пароль
-         * @param autoConnect Авто-подключение
          * @return true если успешно
          */
-        bool save(const String &ssid, const String &password, bool autoConnect = true) {
-            return save(WiFiCredentials(ssid, password, autoConnect));
+        bool save(const String &ssid, const String &password) {
+            return save(WiFiCredentials(ssid, password));
         }
 
         /**
@@ -217,14 +204,6 @@ namespace HAL {
         }
 
         /**
-         * @brief Получить флаг авто-подключения
-         * @return true если авто-подключение включено
-         */
-        bool getAutoConnect() {
-            return preferences.getBool("auto", true);
-        }
-
-        /**
          * @brief Получить сохранённые credentials
          * @return WiFiCredentials struct
          */
@@ -232,7 +211,6 @@ namespace HAL {
             WiFiCredentials creds;
             creds.ssid = preferences.getString("ssid", "");
             creds.password = preferences.getString("pass", "");
-            creds.autoConnect = preferences.getBool("auto", true);
             return creds;
         }
 
@@ -259,11 +237,6 @@ namespace HAL {
                 Serial.print("WiFiSettings: Failed to remove password, error: ");
             }
 
-            ret = preferences.remove("auto");
-            if (!ret) {
-                Serial.print("WiFiSettings: Failed to remove auto, error: ");
-            }
-
             configured = false;
             Serial.println("WiFiSettings: Credentials cleared");
             return true;
@@ -280,8 +253,6 @@ namespace HAL {
             if (configured) {
                 info += " | SSID: ";
                 info += getSSID();
-                info += " | Auto: ";
-                info += getAutoConnect() ? "Yes" : "No";
             }
 
             return info;

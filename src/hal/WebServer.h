@@ -294,13 +294,12 @@ private:
         if (server->hasArg("ssid") && server->hasArg("password")) {
             String ssid = server->arg("ssid");
             String password = server->arg("password");
-            bool autoConnect = server->hasArg("auto") && server->arg("auto") == "true";
 
             Serial.print("WiFi: Saving credentials - SSID: ");
             Serial.println(ssid);
 
             // Сохраняем в NVS
-            if (wifiSettings->save(ssid, password, autoConnect)) {
+            if (wifiSettings->save(ssid, password)) {
                 // Обновляем credentials в WiFiManager
                 if (wifiManager) {
                     wifiManager->setCredentials(ssid.c_str(), password.c_str());
@@ -423,10 +422,20 @@ private:
             </div>
         </div>
         
+        <nav class="top-nav">
+            <a href="/led" class="nav-item">
+                <span class="nav-icon">🎨</span>
+                <span class="nav-text">LED Settings</span>
+            </a>
+            <a href="/wifi" class="nav-item">
+                <span class="nav-icon">📶</span>
+                <span class="nav-text">WiFi Settings</span>
+            </a>
+        </nav>
+
         <div class="footer">
             <p>Last update: <span id="last-update">--:--:--</span></p>
             <p>Auto-refresh: <span id="refresh-status">ON</span></p>
-            <p><a href="/led" class="nav-link">🎨 LED Settings</a></p>
         </div>
     </div>
     
@@ -578,6 +587,55 @@ h1 {
 .sensor-card .status.error {
     background: rgba(255, 50, 50, 0.2);
     color: #ff3232;
+}
+
+/* Top Navigation Menu */
+.top-nav {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 25px;
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 255, 100, 0.15));
+    border-radius: 12px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.nav-item:hover {
+    transform: translateY(-3px);
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.3), rgba(0, 255, 100, 0.3));
+    box-shadow: 0 8px 25px rgba(0, 217, 255, 0.3);
+    border-color: rgba(0, 217, 255, 0.5);
+}
+
+.nav-item:active {
+    transform: translateY(-1px);
+}
+
+.nav-icon {
+    font-size: 1.3em;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.nav-text {
+    letter-spacing: 0.3px;
 }
 
 .footer {
@@ -743,20 +801,69 @@ h1 {
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .nav-link {
-            color: #00d9ff;
-            text-decoration: none;
-            transition: color 0.3s;
+        .top-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .nav-link:hover {
-            color: #00ff64;
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 255, 100, 0.15));
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item:hover {
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.3), rgba(0, 255, 100, 0.3));
+            box-shadow: 0 8px 25px rgba(0, 217, 255, 0.3);
+            border-color: rgba(0, 217, 255, 0.5);
+        }
+
+        .nav-item:active {
+            transform: translateY(-1px);
+        }
+
+        .nav-icon {
+            font-size: 1.3em;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .nav-text {
+            letter-spacing: 0.3px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎨 LED Settings</h1>
+
+        <nav class="top-nav">
+            <a href="/" class="nav-item">
+                <span class="nav-icon">⬅️</span>
+                <span class="nav-text">Back</span>
+            </a>
+            <a href="/wifi" class="nav-item">
+                <span class="nav-icon">📶</span>
+                <span class="nav-text">WiFi Settings</span>
+            </a>
+        </nav>
 
         <div class="color-preview" id="colorPreview"></div>
 
@@ -1061,20 +1168,69 @@ h1 {
             border: 1px solid rgba(255, 153, 0, 0.5);
         }
 
-        .nav-link {
-            color: #00d9ff;
-            text-decoration: none;
-            transition: color 0.3s;
+        .top-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .nav-link:hover {
-            color: #00ff64;
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 255, 100, 0.15));
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item:hover {
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.3), rgba(0, 255, 100, 0.3));
+            box-shadow: 0 8px 25px rgba(0, 217, 255, 0.3);
+            border-color: rgba(0, 217, 255, 0.5);
+        }
+
+        .nav-item:active {
+            transform: translateY(-1px);
+        }
+
+        .nav-icon {
+            font-size: 1.3em;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .nav-text {
+            letter-spacing: 0.3px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📶 WiFi Settings</h1>
+
+        <nav class="top-nav">
+            <a href="/" class="nav-item">
+                <span class="nav-icon">⬅️</span>
+                <span class="nav-text">Back</span>
+            </a>
+            <a href="/led" class="nav-item">
+                <span class="nav-icon">🎨</span>
+                <span class="nav-text">LED Settings</span>
+            </a>
+        </nav>
 
         <div id="apStatus" class="ap-status" style="display:none;">
             📡 AP Mode Active - Connect to: <strong id="apSSID">Banya-Controller-XXXX</strong>
@@ -1092,11 +1248,6 @@ h1 {
                 <input type="password" id="passwordInput" placeholder="Enter password">
             </div>
 
-            <div class="checkbox-group">
-                <input type="checkbox" id="autoConnect" checked>
-                <label for="autoConnect">Auto-connect on boot</label>
-            </div>
-
             <div id="statusMessage" class="status-message" style="display:none;"></div>
 
             <div class="btn-group">
@@ -1104,10 +1255,6 @@ h1 {
                 <button class="btn btn-ap" id="apToggleBtn" onclick="toggleAP()">📡 Enable AP Mode</button>
                 <button class="btn btn-save" onclick="saveWiFi()">💾 Save & Reboot</button>
             </div>
-        </div>
-
-        <div class="footer">
-            <p><a href="/led" class="nav-link">🎨 LED Settings</a></p>
         </div>
     </div>
 
@@ -1170,7 +1317,6 @@ h1 {
         function saveWiFi() {
             const ssid = document.getElementById('ssidInput').value.trim();
             const password = document.getElementById('passwordInput').value;
-            const autoConnect = document.getElementById('autoConnect').checked;
 
             if (!ssid) {
                 showStatus('Please enter SSID', 'error');
@@ -1180,7 +1326,6 @@ h1 {
             const params = new URLSearchParams();
             params.append('ssid', ssid);
             params.append('password', password);
-            params.append('auto', autoConnect ? 'true' : 'false');
 
             fetch('/wifi/save', {
                 method: 'POST',
