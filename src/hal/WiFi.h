@@ -47,7 +47,7 @@ struct APConfig {
     uint8_t maxConnections;       // Максимум подключений (1-10)
 
     APConfig(
-        const char* ssid = "Banya-Controller",
+        const char* ssid = "Banya-Ctl",
         const char* password = "banya1234",
         uint8_t ch = 1,
         bool hidden = false,

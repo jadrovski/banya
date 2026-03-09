@@ -52,39 +52,36 @@ public:
 
         // Проверяем, включён ли AP режим
         bool currentAPEnabled = wifiManager->isAPEnabled();
+        const APConfig& apCfg = wifiManager->getAPConfig();
+        const String apiP = wifiManager->getAPIPAddressString();
 
-        // Строка 0: Заголовок
-        if (currentAPEnabled) {
-            lcd.line_printf(0, "\x04 WiFi Setup Mode"); // Heart icon if available
+        // Строка 0: Заголовок со статусом AP (ON/OFF)
+        lcd.line_printf(0, "WiFi Setup: %s", currentAPEnabled ? "ON" : "OFF");
+
+        // Строка 1: SSID
+        if (currentAPEnabled && apCfg.ssid && strlen(apCfg.ssid) > 0) {
+            lcd.line_printf(1, "SSID: %.16s", apCfg.ssid);
         } else {
-            lcd.line_printf(0, "WiFi Setup Ready");
+            lcd.line_printf(1, "SSID: --");
         }
 
-        // Строка 1: Статус AP
-        if (currentAPEnabled) {
-            const String apiP = wifiManager->getAPIPAddressString();
-            const APConfig& apCfg = wifiManager->getAPConfig();
-            
-            lcd.line_printf(1, "AP: %s", apCfg.ssid);
-            
-            // Строка 2: IP адрес
-            lcd.line_printf(2, "http://%s", apiP.c_str());
-            
-            // Строка 3: Инструкция
-            lcd.line_printf(3, "Connect & open browser");
-            
-            apEnabled = true;
+        // Строка 2: Password
+        if (currentAPEnabled && apCfg.password && strlen(apCfg.password) > 0) {
+            lcd.line_printf(2, "Pass: %.16s", apCfg.password);
         } else {
-            // AP ещё не включён - показываем инструкцию
-            lcd.line_printf(1, "Visit: /wifi");
-            lcd.line_printf(2, "on main web interface");
-            lcd.line_printf(3, "Long press: Enable AP");
-            
-            apEnabled = false;
+            lcd.line_printf(2, "Pass: --");
         }
 
-        lastAPIP = wifiManager->getAPIPAddressString();
-        lastAPSSID = wifiManager->getAPConfig().ssid;
+        // Строка 3: IP адрес
+        if (currentAPEnabled) {
+            lcd.line_printf(3, "IP: %s", apiP.c_str());
+        } else {
+            lcd.line_printf(3, "IP: --");
+        }
+
+        lastAPIP = apiP;
+        lastAPSSID = apCfg.ssid ? apCfg.ssid : "";
+        apEnabled = currentAPEnabled;
     }
 
     /**

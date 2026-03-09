@@ -55,7 +55,6 @@ private:
     WiFiManager* wifiManager;
     WiFiSettings* wifiSettings;
     bool running;
-    bool wifiSetupMode;
 
 public:
     /**
@@ -65,7 +64,7 @@ public:
     explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig())
         : config(cfg), server(nullptr), statusProvider(nullptr), getLedColor(nullptr),
           setLedColor(nullptr), wifiManager(nullptr), wifiSettings(nullptr),
-          running(false), wifiSetupMode(false) {}
+          running(false) {}
 
     ~BanyaWebServer() {
         stop();
@@ -165,22 +164,6 @@ public:
     void setWiFiSettings(WiFiSettings* settings) {
         wifiSettings = settings;
     }
-
-    /**
-     * @brief Включить режим настройки WiFi
-     * @param enable true для включения
-     */
-    void enableWiFiSetupMode(bool enable = true) {
-        wifiSetupMode = enable;
-        Serial.print("WebServer: WiFi Setup Mode ");
-        Serial.println(enable ? "enabled" : "disabled");
-    }
-
-    /**
-     * @brief Проверка, активен ли режим настройки WiFi
-     * @return true если режим настройки активен
-     */
-    bool isWiFiSetupMode() const { return wifiSetupMode; }
 
     /**
      * @brief Проверка работает ли сервер
@@ -337,7 +320,6 @@ private:
         Serial.println("WiFi: Enabling AP mode...");
         
         if (wifiManager->enableAP()) {
-            wifiSetupMode = true;
             String json = "{\"success\":true,\"ip\":\"" + wifiManager->getAPIPAddressString() + "\"}";
             server->send(200, "application/json", json);
         } else {
@@ -357,7 +339,6 @@ private:
         Serial.println("WiFi: Disabling AP mode...");
 
         if (wifiManager->disableAP()) {
-            wifiSetupMode = false;
             server->send(200, "application/json", "{\"success\":true}");
         } else {
             server->send(500, "application/json", "{\"error\":\"Failed to disable AP\"}");
@@ -378,7 +359,7 @@ private:
         json += "\"enabled\":" + String(apEnabled ? "true" : "false");
         if (apEnabled) {
             json += ",\"ip\":\"" + wifiManager->getAPIPAddressString() + "\"";
-            json += ",\"ssid\":\"Banya-Controller-" + WiFi.macAddress().substring(12) + "\"";
+            json += ",\"ssid\":\"Banya-Ctl\"";
         }
         json += "}";
         server->send(200, "application/json", json);
@@ -1254,7 +1235,7 @@ h1 {
         </nav>
 
         <div id="apStatus" class="ap-status" style="display:none;">
-            📡 AP Mode Active - Connect to: <strong id="apSSID">Banya-Controller-XXXX</strong>
+            📡 AP Mode Active - Connect to: <strong id="apSSID">Banya-Ctl</strong>
             <br>IP: <strong id="apIP">192.168.4.1</strong>
         </div>
 
@@ -1348,7 +1329,7 @@ h1 {
                             apEnabled = true;
                             document.getElementById('apIP').textContent = data.ip;
                             updateAPUI();
-                            showStatus('AP Mode enabled. Connect to Banya-Controller network.', 'success');
+                            showStatus('AP Mode enabled. Connect to Banya-Ctl network.', 'success');
                         } else {
                             showStatus('Failed to enable AP', 'error');
                         }

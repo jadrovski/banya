@@ -81,7 +81,7 @@ HAL::RGBLED ledStrip(ledConfig);
 
 // WiFi и веб-сервер
 HAL::WiFiSettings wifiSettings;
-HAL::WiFiConfig wifiConfig("", "", 15000, true);  // Credentials будут загружены из NVS
+HAL::WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
 HAL::WiFiManager wifi(wifiConfig);
 HAL::BanyaWebServer webServer;
 
@@ -209,26 +209,17 @@ void handleTouchCallback(HAL::TouchEvent event) {
         case HAL::TouchEvent::VERY_LONG_PRESS:
             // Enter WiFi Setup Mode
             Serial.println("Touch: Very-long press - Entering WiFi Setup Mode...");
-            
-            // Включаем AP режим
-            if (wifi.enableAP("Banya-Controller", "banya1234")) {
-                lcd.clear();
-                lcd.setCursor(0, 0);
-                lcd.print("WiFi Setup Mode");
-                lcd.setCursor(0, 1);
-                lcd.print("AP: Banya-Controller");
-                lcd.setCursor(0, 2);
-                lcd.print("Pass: banya1234");
-                lcd.setCursor(0, 3);
-                lcd.print("http://192.168.4.1");
-                
-                webServer.enableWiFiSetupMode(true);
-                
-                // Переходим на страницу настройки WiFi
-                if (wifiSetupPage) {
-                    pageMgr.goToPage(5); // WiFi Setup page is last
-                    pageMgr.render();
-                }
+
+            if (!wifi.isAPEnabled()) {
+                wifi.enableAP();
+            } else {
+                wifi.disableAP();
+            }
+
+            // Переходим на страницу настройки WiFi
+            if (wifiSetupPage) {
+                pageMgr.goToPage(3); // WiFi Setup page is last
+                pageMgr.render();
             }
             break;
 
@@ -380,18 +371,6 @@ void handleSerialCommands() {
                 wifi.reconnect();
                 break;
 
-            // WiFi Setup Mode
-            case 'Z': // WiFi Setup (Z like Zone)
-                Serial.println("WiFi: Entering Setup Mode...");
-                if (wifi.enableAP("Banya-Controller", "banya1234")) {
-                    webServer.enableWiFiSetupMode(true);
-                    if (wifiSetupPage) {
-                        pageMgr.goToPage(5);
-                        pageMgr.render();
-                    }
-                }
-                break;
-
             // Переключение страниц
             case '>':
             case '.':
@@ -510,7 +489,7 @@ void setup() {
     lcd.print(wifiConfig.ssid);
 
     bool wifiConnected = wifi.connect();
-    
+
     // Запуск веб-сервера (всегда, даже если WiFi не подключён)
     webServer.begin();
     webServer.setStatusProvider(getBanyaStatus);
@@ -554,17 +533,17 @@ void setup() {
     dallasPage = new HAL::DallasSensorsPage(&ds18b20, "Dallas DS18B20");
     bmePage = new HAL::BME280Page(&bme, "BME280 Sensor");
     wifiPage = new HAL::WiFiInfoPage(&wifi, "WiFi Info");
+    wifiSetupPage = new HAL::WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup");
     statusPage = new HAL::SystemStatusPage(&wifi, "System Status");
     ledStripPage = new HAL::LEDStripPage(&ledStrip, pLedController, "LED Strip");
-    wifiSetupPage = new HAL::WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup");
 
     // Добавление страниц в менеджер
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(dallasPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(bmePage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiPage));
+    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiSetupPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(statusPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(ledStripPage));
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiSetupPage));
 
     pageMgr.begin(&lcd);
 
