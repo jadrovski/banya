@@ -68,37 +68,4 @@ protected:
     virtual void updateHardware();
 };
 
-// Banya-specific LED strip with temperature/humidity awareness
-class BanyaLEDStrip : public LEDStrip {
-private:
-    float currentTemp;
-    float currentHumidity;
-
-public:
-    BanyaLEDStrip(uint8_t pinR, uint8_t pinG, uint8_t pinB);
-
-    // Update environmental data
-    void updateEnvironment(float temperatureC, float humidity);
-
-    // Banya-specific modes
-    void setTemperatureMode();
-    void setHumidityMode();
-    void setComfortMode();
-    void setSafetyMode();
-    void setRelaxMode();
-
-    // Automatic mode based on conditions
-    void setAutoMode();
-
-    // Get environmental data
-    float getTemperature() const { return currentTemp; }
-    float getHumidity() const { return currentHumidity; }
-
-private:
-    RGB calculateTemperatureColor() const;
-    RGB calculateHumidityColor() const;
-    RGB calculateComfortColor() const;
-    RGB calculateSafetyColor() const;
-};
-
 #endif // BANYA_LEDSTRIP_H
