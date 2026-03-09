@@ -38,14 +38,8 @@ constexpr uint8_t LEDC_CHANNEL_R = 0;
 constexpr uint8_t LEDC_CHANNEL_G = 1;
 constexpr uint8_t LEDC_CHANNEL_B = 2;
 
-// WiFi конфигурация (из build_flags в platformio.ini)
-#ifndef WIFI_SSID
-#error "WIFI_SSID not defined! Check platformio.ini and wifi.ini"
-#endif
-#ifndef WIFI_PASSWORD
-#error "WIFI_PASSWORD not defined! Check platformio.ini and wifi.ini"
-#endif
-
+// WiFi конфигурация (credentials хранятся в NVS через AP+Storage)
+// WIFI_SSID и WIFI_PASSWORD определяются в platformio.ini как пустые placeholder'ы
 constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM3; // Touch конфигурация (используем T3 = GPIO15)
 constexpr float TOUCH_THRESHOLD_PERCENT = 0.8f; // Порог срабатывания тача (% от baseline)
 constexpr uint32_t TOUCH_DEBOUNCE_MS = 50;
@@ -449,25 +443,11 @@ void setup() {
             Serial.print("WiFi Settings: Loaded from NVS - SSID: ");
             Serial.println(creds.ssid);
         } else {
-            // Если нет настроек в NVS, используем из wifi.ini и сохраняем
-            wifiConfig.ssid = WIFI_SSID;
-            wifiConfig.password = WIFI_PASSWORD;
-            Serial.println("WiFi Settings: Using build-time credentials");
-
-            // Сохраняем build-time credentials в NVS для будущих загрузок
-            Serial.println("WiFi Settings: Saving to NVS...");
-            if (wifiSettings.save(WIFI_SSID, WIFI_PASSWORD)) {
-                Serial.println("WiFi Settings: Saved to NVS successfully");
-            } else {
-                Serial.println("WiFi Settings: Failed to save to NVS");
-            }
+            Serial.println("WiFi Settings: No credentials in NVS - will use AP mode for setup");
         }
     } else {
         Serial.println("FAILED");
-        // Используем credentials из build flags
-        wifiConfig.ssid = WIFI_SSID;
-        wifiConfig.password = WIFI_PASSWORD;
-        Serial.println("WiFi Settings: Fallback to build-time credentials");
+        Serial.println("WiFi Settings: Will use AP mode for setup");
     }
 
     // Инициализация WiFi

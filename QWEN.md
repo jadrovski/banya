@@ -101,15 +101,12 @@ pio run --target clean
 
 ### WiFi Configuration
 
-Create `wifi.ini` from `wifi.ini.example`:
+WiFi credentials are stored in NVS (Non-Volatile Storage) and configured via:
 
-```ini
-[env:esp32doit-devkit-v1]
-WIFI_SSID = "your_wifi_ssid"
-WIFI_PASSWORD = "your_wifi_password"
-```
+1. **AP Mode Setup**: Connect to the device's access point and configure via web interface
+2. **Touch Sensor**: Long press (>5s) to enter WiFi setup mode
 
-The `load_wifi_config.py` script loads credentials at build time.
+On first boot, the device automatically starts in AP mode for initial configuration.
 
 ### Dependencies (from `platformio.ini`)
 
@@ -233,6 +230,5 @@ Touch: Value=45, Baseline=50, Threshold=40
 
 ## Git Configuration
 
-- `wifi.ini` is gitignored (contains credentials)
-- Use `wifi.ini.example` as template
 - `.pio/` build directory is gitignored
+- WiFi credentials stored in device NVS (not in version control)
