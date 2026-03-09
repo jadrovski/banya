@@ -91,7 +91,8 @@ public:
         server->on("/wifi/save", std::bind(&BanyaWebServer::handleWiFiSave, this));
         server->on("/wifi/ap-enable", std::bind(&BanyaWebServer::handleEnableAP, this));
         server->on("/wifi/ap-disable", std::bind(&BanyaWebServer::handleDisableAP, this));
-        
+        server->on("/wifi/ap-status", std::bind(&BanyaWebServer::handleAPStatus, this));
+
         // System endpoints
         server->on("/reboot", std::bind(&BanyaWebServer::handleReboot, this));
 
@@ -354,13 +355,33 @@ private:
         }
 
         Serial.println("WiFi: Disabling AP mode...");
-        
+
         if (wifiManager->disableAP()) {
             wifiSetupMode = false;
             server->send(200, "application/json", "{\"success\":true}");
         } else {
             server->send(500, "application/json", "{\"error\":\"Failed to disable AP\"}");
         }
+    }
+
+    /**
+     * @brief Обработка запроса статуса AP режима
+     */
+    void handleAPStatus() {
+        if (!wifiManager) {
+            server->send(500, "application/json", "{\"error\":\"No WiFi manager\"}");
+            return;
+        }
+
+        bool apEnabled = wifiManager->isAPEnabled();
+        String json = "{";
+        json += "\"enabled\":" + String(apEnabled ? "true" : "false");
+        if (apEnabled) {
+            json += ",\"ip\":\"" + wifiManager->getAPIPAddressString() + "\"";
+            json += ",\"ssid\":\"Banya-Controller-" + WiFi.macAddress().substring(12) + "\"";
+        }
+        json += "}";
+        server->send(200, "application/json", json);
     }
 
     /**
@@ -1261,6 +1282,33 @@ h1 {
     <script>
         let apEnabled = false;
 
+        // Загрузка статуса AP с сервера
+        function loadAPStatus() {
+            fetch('/wifi/ap-status')
+                .then(response => response.json())
+                .then(data => {
+                    apEnabled = data.enabled;
+                    updateAPUI();
+                })
+                .catch(error => {
+                    console.error('Error loading AP status:', error);
+                });
+        }
+
+        // Обновление UI на основе статуса AP
+        function updateAPUI() {
+            const btn = document.getElementById('apToggleBtn');
+            const apStatus = document.getElementById('apStatus');
+
+            if (apEnabled) {
+                btn.textContent = '📡 Disable AP Mode';
+                apStatus.style.display = 'block';
+            } else {
+                btn.textContent = '📡 Enable AP Mode';
+                apStatus.style.display = 'none';
+            }
+        }
+
         // Показать сообщение о статусе
         function showStatus(message, type) {
             const msgEl = document.getElementById('statusMessage');
@@ -1282,8 +1330,7 @@ h1 {
                     .then(data => {
                         if (data.success) {
                             apEnabled = false;
-                            btn.textContent = '📡 Enable AP Mode';
-                            apStatus.style.display = 'none';
+                            updateAPUI();
                             showStatus('AP Mode disabled', 'info');
                         } else {
                             showStatus('Failed to disable AP', 'error');
@@ -1299,9 +1346,8 @@ h1 {
                     .then(data => {
                         if (data.success) {
                             apEnabled = true;
-                            btn.textContent = '📡 Disable AP Mode';
                             document.getElementById('apIP').textContent = data.ip;
-                            apStatus.style.display = 'block';
+                            updateAPUI();
                             showStatus('AP Mode enabled. Connect to Banya-Controller network.', 'success');
                         } else {
                             showStatus('Failed to enable AP', 'error');
@@ -1360,7 +1406,7 @@ h1 {
 
         // Загрузка статуса при старте
         window.onload = function() {
-            // Можно добавить проверку текущего статуса WiFi
+            loadAPStatus();
         };
     </script>
 </body>
