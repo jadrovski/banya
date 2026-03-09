@@ -88,7 +88,6 @@ public:
         
         // WiFi configuration endpoints
         server->on("/wifi", std::bind(&BanyaWebServer::handleWiFiPage, this));
-        server->on("/wifi/scan", std::bind(&BanyaWebServer::handleWiFiScan, this));
         server->on("/wifi/save", std::bind(&BanyaWebServer::handleWiFiSave, this));
         server->on("/wifi/ap-enable", std::bind(&BanyaWebServer::handleEnableAP, this));
         server->on("/wifi/ap-disable", std::bind(&BanyaWebServer::handleDisableAP, this));
@@ -281,56 +280,6 @@ private:
     void handleWiFiPage() {
         String html = getWiFiPageHTML();
         server->send(200, "text/html", html);
-    }
-
-    /**
-     * @brief Обработка сканирования WiFi сетей
-     */
-    void handleWiFiScan() {
-        if (!wifiManager) {
-            server->send(500, "application/json", "{\"error\":\"No WiFi manager\"}");
-            return;
-        }
-
-        Serial.println("WiFi: Scanning networks...");
-
-        // Сохраняем текущий режим WiFi
-        bool wasAPEnabled = wifiManager->isAPEnabled();
-
-        // Переключаем в режим STA для сканирования
-        WiFi.mode(WIFI_STA);
-
-        // Синхронное сканирование с таймаутом
-        int n = WiFi.scanNetworks(false, false, false, 5000);
-
-        Serial.print("WiFi: Found ");
-        Serial.print(n);
-        Serial.println(" networks");
-
-        // Восстанавливаем AP режим если он был включён
-        if (wasAPEnabled) {
-            Serial.println("WiFi: Restoring AP mode...");
-            delay(10);  // Короткая задержка перед переключением
-            WiFi.mode(WIFI_AP_STA);
-            // Перезапускаем softAP чтобы восстановить состояние
-            wifiManager->enableAP(wifiManager->getAPConfig());
-        }
-
-        if (n <= 0) {
-            server->send(200, "application/json", "[]");
-        } else {
-            String json = "[";
-            for (int i = 0; i < n; ++i) {
-                if (i > 0) json += ",";
-                json += "{";
-                json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
-                json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-                json += "\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
-                json += "}";
-            }
-            json += "]";
-            server->send(200, "application/json", json);
-        }
     }
 
     /**
@@ -1044,11 +993,6 @@ h1 {
             transform: translateY(0);
         }
 
-        .btn-scan {
-            background: linear-gradient(135deg, #00d9ff, #0099ff);
-            color: #fff;
-        }
-
         .btn-save {
             background: linear-gradient(135deg, #00d9ff, #00ff64);
             color: #1a1a2e;
@@ -1139,16 +1083,6 @@ h1 {
 
         <div class="wifi-controls">
             <div class="form-group">
-                <label>🌐 Select Network</label>
-                <div class="network-list" id="networkList">
-                    <div style="text-align:center;color:#666;padding:20px;">
-                        Press "Scan" to find networks
-                    </div>
-                </div>
-                <button class="btn btn-scan" onclick="scanNetworks()">🔍 Scan Networks</button>
-            </div>
-
-            <div class="form-group">
                 <label>📝 Network Name (SSID)</label>
                 <input type="text" id="ssidInput" placeholder="Enter SSID manually or select from list">
             </div>
@@ -1187,62 +1121,6 @@ h1 {
             msgEl.className = 'status-message ' + type;
             msgEl.style.display = 'block';
             setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
-        }
-
-        // Сканирование сетей
-        function scanNetworks() {
-            const listEl = document.getElementById('networkList');
-            listEl.innerHTML = '<div style="text-align:center;color:#00d9ff;padding:20px;">Scanning...</div>';
-
-            fetch('/wifi/scan')
-                .then(response => response.json())
-                .then(networks => {
-                    if (networks.length === 0) {
-                        listEl.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">No networks found</div>';
-                        return;
-                    }
-
-                    // Сортировка по RSSI (сигнал)
-                    networks.sort((a, b) => b.rssi - a.rssi);
-
-                    let html = '';
-                    networks.forEach(net => {
-                        const signalBars = getSignalBars(net.rssi);
-                        const secureIcon = net.secure ? '🔒' : '⚠️';
-                        const secureClass = net.secure ? 'network-secure' : 'network-open';
-                        html += '<div class="network-item" onclick="selectNetwork(\'' + escapeSSID(net.ssid) + '\')">';
-                        html += '<span class="network-ssid">' + escapeSSID(net.ssid) + '</span>';
-                        html += '<span>';
-                        html += '<span class="' + secureClass + '">' + secureIcon + '</span> ';
-                        html += '<span class="network-rssi">' + signalBars + ' (' + net.rssi + ' dBm)</span>';
-                        html += '</span></div>';
-                    });
-                    listEl.innerHTML = html;
-                })
-                .catch(error => {
-                    listEl.innerHTML = '<div style="text-align:center;color:#ff3232;padding:20px;">Scan failed</div>';
-                    showStatus('Failed to scan networks', 'error');
-                });
-        }
-
-        // Получить количество "палочек" сигнала
-        function getSignalBars(rssi) {
-            if (rssi >= -50) return '📶📶📶';
-            if (rssi >= -60) return '📶📶📶';
-            if (rssi >= -70) return '📶📶';
-            if (rssi >= -80) return '📶';
-            return '📶';
-        }
-
-        // Экранирование SSID для JavaScript
-        function escapeSSID(ssid) {
-            return ssid.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        }
-
-        // Выбор сети из списка
-        function selectNetwork(ssid) {
-            document.getElementById('ssidInput').value = ssid;
-            document.getElementById('passwordInput').focus();
         }
 
         // Переключение AP режима
