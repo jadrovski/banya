@@ -3,6 +3,7 @@
 #include "hal/pages/Sensors.h"
 #include "hal/pages/Status.h"
 #include "hal/pages/LEDStripPage.h"
+#include "hal/pages/WiFiSetupPage.h"
 #include "LEDController.h"
 #include "LEDStrip.h"
 #include "color/BanyaColors.h"
@@ -79,7 +80,8 @@ HAL::RGBLEDConfig ledConfig(LED_R_PIN, LED_G_PIN, LED_B_PIN,
 HAL::RGBLED ledStrip(ledConfig);
 
 // WiFi и веб-сервер
-HAL::WiFiConfig wifiConfig(WIFI_SSID, WIFI_PASSWORD, 15000, true);
+HAL::WiFiSettings wifiSettings;
+HAL::WiFiConfig wifiConfig("", "", 15000, true);  // Credentials будут загружены из NVS
 HAL::WiFiManager wifi(wifiConfig);
 HAL::BanyaWebServer webServer;
 
@@ -102,6 +104,7 @@ HAL::BME280Page *bmePage = nullptr;
 HAL::DisplayPage *wifiPage = nullptr;
 HAL::SystemStatusPage *statusPage = nullptr;
 HAL::LEDStripPage *ledStripPage = nullptr;
+HAL::WiFiSetupPage *wifiSetupPage = nullptr;
 
 // Banya-specific LED strip controller
 LEDStripController *pLedController = nullptr;
@@ -195,7 +198,7 @@ void setLEDColor(RGB color) {
 /**
  * @brief Callback для обработки событий Touch сенсора
  * - Long press: WiFi reconnect
- * - Very-long press: reboot устройства
+ * - Very-long press: Enter WiFi Setup Mode (AP mode)
  */
 void handleTouchCallback(HAL::TouchEvent event) {
     switch (event) {
@@ -204,12 +207,29 @@ void handleTouchCallback(HAL::TouchEvent event) {
             break;
 
         case HAL::TouchEvent::VERY_LONG_PRESS:
-            Serial.println("Touch: Very-long press - Rebooting device...");
-            lcd.clear();
-            lcd.setCursor(0, 1);
-            lcd.print("Rebooting...");
-            delay(500);
-            ESP.restart();
+            // Enter WiFi Setup Mode
+            Serial.println("Touch: Very-long press - Entering WiFi Setup Mode...");
+            
+            // Включаем AP режим
+            if (wifi.enableAP("Banya-Controller", "banya1234")) {
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("WiFi Setup Mode");
+                lcd.setCursor(0, 1);
+                lcd.print("AP: Banya-Controller");
+                lcd.setCursor(0, 2);
+                lcd.print("Pass: banya1234");
+                lcd.setCursor(0, 3);
+                lcd.print("http://192.168.4.1");
+                
+                webServer.enableWiFiSetupMode(true);
+                
+                // Переходим на страницу настройки WiFi
+                if (wifiSetupPage) {
+                    pageMgr.goToPage(5); // WiFi Setup page is last
+                    pageMgr.render();
+                }
+            }
             break;
 
         case HAL::TouchEvent::TAP:
@@ -302,7 +322,7 @@ void handleSerialCommands() {
                 ledStrip.setColor(RGB(0, 255, 0));
                 Serial.println("Color: Green");
                 break;
-            case 'V': // Blue
+            case 'U': // Blue (U like blUe)
                 ledStrip.setColor(RGB(0, 0, 255));
                 Serial.println("Color: Blue");
                 break;
@@ -358,6 +378,18 @@ void handleSerialCommands() {
             case 'L': // Link
                 Serial.println("WiFi: Reconnecting...");
                 wifi.reconnect();
+                break;
+
+            // WiFi Setup Mode
+            case 'Z': // WiFi Setup (Z like Zone)
+                Serial.println("WiFi: Entering Setup Mode...");
+                if (wifi.enableAP("Banya-Controller", "banya1234")) {
+                    webServer.enableWiFiSetupMode(true);
+                    if (wifiSetupPage) {
+                        pageMgr.goToPage(5);
+                        pageMgr.render();
+                    }
+                }
                 break;
 
             // Переключение страниц
@@ -424,6 +456,32 @@ void setup() {
     // Создание контроллера LED эффектов
     pLedController = new LEDStripController(&ledStrip);
 
+    // Инициализация WiFi Settings (NVS)
+    Serial.print("Initializing WiFi Settings (NVS)... ");
+    if (wifiSettings.begin()) {
+        Serial.println("OK");
+        
+        // Загружаем credentials из NVS
+        if (wifiSettings.isConfigured()) {
+            HAL::WiFiCredentials creds = wifiSettings.getCredentials();
+            wifiConfig.ssid = strdup(creds.ssid.c_str());
+            wifiConfig.password = strdup(creds.password.c_str());
+            wifiConfig.autoReconnect = creds.autoConnect;
+            Serial.print("WiFi Settings: Loaded from NVS - SSID: ");
+            Serial.println(creds.ssid);
+        } else {
+            // Если нет настроек в NVS, используем из wifi.ini
+            wifiConfig.ssid = WIFI_SSID;
+            wifiConfig.password = WIFI_PASSWORD;
+            Serial.println("WiFi Settings: Using build-time credentials");
+        }
+    } else {
+        Serial.println("FAILED");
+        // Используем credentials из build flags
+        wifiConfig.ssid = WIFI_SSID;
+        wifiConfig.password = WIFI_PASSWORD;
+    }
+
     // Инициализация WiFi
     if (wifi.begin()) {
         Serial.println("OK");
@@ -437,15 +495,19 @@ void setup() {
     lcd.write(1); // WiFi иконка
     lcd.print(" Connecting...");
     lcd.setCursor(0, 2);
-    lcd.print(WIFI_SSID);
+    lcd.print(wifiConfig.ssid);
 
-    if (wifi.connect()) {
-        // Запуск веб-сервера
-        webServer.begin();
-        webServer.setStatusProvider(getBanyaStatus);
-        webServer.setLEDControl(getLEDColor, setLEDColor);
-        webServer.start();
+    bool wifiConnected = wifi.connect();
+    
+    // Запуск веб-сервера (всегда, даже если WiFi не подключён)
+    webServer.begin();
+    webServer.setStatusProvider(getBanyaStatus);
+    webServer.setLEDControl(getLEDColor, setLEDColor);
+    webServer.setWiFiManager(&wifi);
+    webServer.setWiFiSettings(&wifiSettings);
+    webServer.start();
 
+    if (wifiConnected) {
         String ip = wifi.getIPAddressString();
         Serial.println(ip);
         Serial.println("WebServer: Started on http://" + ip);
@@ -453,7 +515,10 @@ void setup() {
         Serial.println("WiFi: Failed to connect");
         lcd.setCursor(0, 3);
         lcd.print("Failed!");
-        // Не делаем delay - страницы отрисуются в loop()
+        // Включаем AP если не удалось подключиться и есть настройки
+        if (wifiSettings.isConfigured()) {
+            Serial.println("WiFi: No connection, will enter AP mode on request");
+        }
     }
 
     // Инициализация Touch сенсора
@@ -479,6 +544,7 @@ void setup() {
     wifiPage = new HAL::WiFiInfoPage(&wifi, "WiFi Info");
     statusPage = new HAL::SystemStatusPage(&wifi, "System Status");
     ledStripPage = new HAL::LEDStripPage(&ledStrip, pLedController, "LED Strip");
+    wifiSetupPage = new HAL::WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup");
 
     // Добавление страниц в менеджер
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(dallasPage));
@@ -486,6 +552,7 @@ void setup() {
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(statusPage));
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(ledStripPage));
+    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiSetupPage));
 
     pageMgr.begin(&lcd);
 
@@ -502,10 +569,12 @@ void setup() {
     Serial.println("Manual: 0-9=Brightness, R/G/B/W=Colors, +=Warmer, -=Cooler");
     Serial.println("Effects: P=Pulse, Q=Rainbow, B=Blink, X=Stop, O=Off");
     Serial.println("Pages: > or . = Next, < or , = Prev, Touch Tap = Next");
-    Serial.println("Touch: Long press = WiFi reconnect, Very-long press = Reboot");
+    Serial.println("Touch: Long press = WiFi reconnect, Very-long press = WiFi Setup");
+    Serial.println("WiFi Setup: V=Enter Setup Mode (very-long press)");
     Serial.println("Diagnostics: D=HAL Info, I=Status, L=WiFi Reconnect");
     Serial.println("\nWeb Interface: http://" + wifi.getIPAddressString());
     Serial.println("Touch sensor: " + touch.getPinName() + " (for page switching)");
+    Serial.println("WiFi Settings: " + wifiSettings.getInfo());
 }
 
 // ============================================================================

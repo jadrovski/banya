@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <WebServer.h>
 #include "WiFi.h"
+#include "WiFiSettings.h"
 
 namespace HAL {
 
@@ -37,11 +38,12 @@ struct BanyaStatus {
 
 /**
  * @brief Веб-сервер для Banya Controller
- * 
+ *
  * Предоставляет:
  * - HTML страницу со статусом сауны
  * - JSON API для получения данных
  * - Автоматическое обновление данных
+ * - WiFi конфигурационный портал
  */
 class BanyaWebServer {
 private:
@@ -50,7 +52,10 @@ private:
     std::function<BanyaStatus()> statusProvider;
     std::function<RGB()> getLedColor;
     std::function<void(RGB)> setLedColor;
+    WiFiManager* wifiManager;
+    WiFiSettings* wifiSettings;
     bool running;
+    bool wifiSetupMode;
 
 public:
     /**
@@ -58,7 +63,9 @@ public:
      * @param cfg Конфигурация
      */
     explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig())
-        : config(cfg), server(nullptr), statusProvider(nullptr), getLedColor(nullptr), setLedColor(nullptr), running(false) {}
+        : config(cfg), server(nullptr), statusProvider(nullptr), getLedColor(nullptr),
+          setLedColor(nullptr), wifiManager(nullptr), wifiSettings(nullptr),
+          running(false), wifiSetupMode(false) {}
 
     ~BanyaWebServer() {
         stop();
@@ -78,6 +85,14 @@ public:
         server->on("/led", std::bind(&BanyaWebServer::handleLEDPage, this));
         server->on("/led/status", std::bind(&BanyaWebServer::handleLEDStatus, this));
         server->on("/led/set", std::bind(&BanyaWebServer::handleLEDSet, this));
+        
+        // WiFi configuration endpoints
+        server->on("/wifi", std::bind(&BanyaWebServer::handleWiFiPage, this));
+        server->on("/wifi/scan", std::bind(&BanyaWebServer::handleWiFiScan, this));
+        server->on("/wifi/save", std::bind(&BanyaWebServer::handleWiFiSave, this));
+        server->on("/wifi/ap-enable", std::bind(&BanyaWebServer::handleEnableAP, this));
+        server->on("/wifi/ap-disable", std::bind(&BanyaWebServer::handleDisableAP, this));
+        
         server->onNotFound(std::bind(&BanyaWebServer::handleNotFound, this));
 
         running = true;
@@ -131,6 +146,38 @@ public:
         getLedColor = getColor;
         setLedColor = setColor;
     }
+
+    /**
+     * @brief Установить менеджер WiFi для конфигурации
+     * @param manager Указатель на WiFiManager
+     */
+    void setWiFiManager(WiFiManager* manager) {
+        wifiManager = manager;
+    }
+
+    /**
+     * @brief Установить хранилище настроек WiFi
+     * @param settings Указатель на WiFiSettings
+     */
+    void setWiFiSettings(WiFiSettings* settings) {
+        wifiSettings = settings;
+    }
+
+    /**
+     * @brief Включить режим настройки WiFi
+     * @param enable true для включения
+     */
+    void enableWiFiSetupMode(bool enable = true) {
+        wifiSetupMode = enable;
+        Serial.print("WebServer: WiFi Setup Mode ");
+        Serial.println(enable ? "enabled" : "disabled");
+    }
+
+    /**
+     * @brief Проверка, активен ли режим настройки WiFi
+     * @return true если режим настройки активен
+     */
+    bool isWiFiSetupMode() const { return wifiSetupMode; }
 
     /**
      * @brief Проверка работает ли сервер
@@ -223,6 +270,122 @@ private:
      */
     void handleNotFound() {
         server->send(404, "text/plain", "Not Found");
+    }
+
+    /**
+     * @brief Обработка страницы настройки WiFi
+     */
+    void handleWiFiPage() {
+        String html = getWiFiPageHTML();
+        server->send(200, "text/html", html);
+    }
+
+    /**
+     * @brief Обработка сканирования WiFi сетей
+     */
+    void handleWiFiScan() {
+        if (!wifiManager) {
+            server->send(500, "application/json", "{\"error\":\"No WiFi manager\"}");
+            return;
+        }
+
+        Serial.println("WiFi: Scanning networks...");
+        
+        // Переключаем в режим STA если нужно
+        WiFi.mode(WIFI_STA);
+        
+        int n = WiFi.scanNetworks();
+        Serial.print("WiFi: Found ");
+        Serial.print(n);
+        Serial.println(" networks");
+
+        if (n == 0) {
+            server->send(200, "application/json", "[]");
+        } else {
+            String json = "[";
+            for (int i = 0; i < n; ++i) {
+                if (i > 0) json += ",";
+                json += "{";
+                json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
+                json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
+                json += "\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+                json += "}";
+            }
+            json += "]";
+            server->send(200, "application/json", json);
+        }
+    }
+
+    /**
+     * @brief Обработка сохранения WiFi настроек
+     */
+    void handleWiFiSave() {
+        if (!wifiSettings) {
+            server->send(500, "application/json", "{\"error\":\"No WiFi settings\"}");
+            return;
+        }
+
+        if (server->hasArg("ssid") && server->hasArg("password")) {
+            String ssid = server->arg("ssid");
+            String password = server->arg("password");
+            bool autoConnect = server->hasArg("auto") && server->arg("auto") == "true";
+
+            Serial.print("WiFi: Saving credentials - SSID: ");
+            Serial.println(ssid);
+
+            // Сохраняем в NVS
+            if (wifiSettings->save(ssid, password, autoConnect)) {
+                // Обновляем credentials в WiFiManager
+                if (wifiManager) {
+                    wifiManager->setCredentials(ssid.c_str(), password.c_str());
+                }
+
+                server->send(200, "application/json", "{\"success\":true,\"message\":\"Saved to NVS\"}");
+            } else {
+                server->send(500, "application/json", "{\"error\":\"Failed to save\"}");
+            }
+        } else {
+            server->send(400, "application/json", "{\"error\":\"Missing ssid or password\"}");
+        }
+    }
+
+    /**
+     * @brief Обработка включения AP режима
+     */
+    void handleEnableAP() {
+        if (!wifiManager) {
+            server->send(500, "application/json", "{\"error\":\"No WiFi manager\"}");
+            return;
+        }
+
+        Serial.println("WiFi: Enabling AP mode...");
+        
+        if (wifiManager->enableAP()) {
+            wifiSetupMode = true;
+            String json = "{\"success\":true,\"ip\":\"" + wifiManager->getAPIPAddressString() + "\"}";
+            server->send(200, "application/json", json);
+        } else {
+            server->send(500, "application/json", "{\"error\":\"Failed to enable AP\"}");
+        }
+    }
+
+    /**
+     * @brief Обработка выключения AP режима
+     */
+    void handleDisableAP() {
+        if (!wifiManager) {
+            server->send(500, "application/json", "{\"error\":\"No WiFi manager\"}");
+            return;
+        }
+
+        Serial.println("WiFi: Disabling AP mode...");
+        
+        if (wifiManager->disableAP()) {
+            wifiSetupMode = false;
+            server->send(200, "application/json", "{\"success\":true}");
+        } else {
+            server->send(500, "application/json", "{\"error\":\"Failed to disable AP\"}");
+        }
     }
 
     /**
@@ -720,6 +883,428 @@ h1 {
 
         // Загрузка при старте
         loadLEDStatus();
+    </script>
+</body>
+</html>
+)rawliteral";
+        return html;
+    }
+
+    /**
+     * @brief Генерация HTML страницы настройки WiFi
+     */
+    String getWiFiPageHTML() {
+        String html = R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Settings - Banya Controller</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .wifi-controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #00d9ff;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="password"] {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: #00d9ff;
+        }
+
+        .form-group input::placeholder {
+            color: #666;
+        }
+
+        .network-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .network-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .network-item:hover {
+            background: rgba(0, 217, 255, 0.2);
+        }
+
+        .network-ssid {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .network-rssi {
+            font-size: 0.85em;
+            color: #aaa;
+        }
+
+        .network-secure {
+            color: #00ff64;
+            margin-left: 10px;
+        }
+
+        .network-open {
+            color: #ff3232;
+            margin-left: 10px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-scan {
+            background: linear-gradient(135deg, #00d9ff, #0099ff);
+            color: #fff;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #00d9ff, #00ff64);
+            color: #1a1a2e;
+        }
+
+        .btn-ap {
+            background: linear-gradient(135deg, #ff9900, #ff6600);
+            color: #fff;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status-message.success {
+            background: rgba(0, 255, 100, 0.2);
+            color: #00ff64;
+        }
+
+        .status-message.error {
+            background: rgba(255, 50, 50, 0.2);
+            color: #ff3232;
+        }
+
+        .status-message.info {
+            background: rgba(0, 217, 255, 0.2);
+            color: #00d9ff;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .ap-status {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            background: rgba(255, 153, 0, 0.2);
+            color: #ff9900;
+            border: 1px solid rgba(255, 153, 0, 0.5);
+        }
+
+        .nav-link {
+            color: #00d9ff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #00ff64;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📶 WiFi Settings</h1>
+
+        <div id="apStatus" class="ap-status" style="display:none;">
+            📡 AP Mode Active - Connect to: <strong id="apSSID">Banya-Controller-XXXX</strong>
+            <br>IP: <strong id="apIP">192.168.4.1</strong>
+        </div>
+
+        <div class="wifi-controls">
+            <div class="form-group">
+                <label>🌐 Select Network</label>
+                <div class="network-list" id="networkList">
+                    <div style="text-align:center;color:#666;padding:20px;">
+                        Press "Scan" to find networks
+                    </div>
+                </div>
+                <button class="btn btn-scan" onclick="scanNetworks()">🔍 Scan Networks</button>
+            </div>
+
+            <div class="form-group">
+                <label>📝 Network Name (SSID)</label>
+                <input type="text" id="ssidInput" placeholder="Enter SSID manually or select from list">
+            </div>
+
+            <div class="form-group">
+                <label>🔐 Password</label>
+                <input type="password" id="passwordInput" placeholder="Enter password">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="autoConnect" checked>
+                <label for="autoConnect">Auto-connect on boot</label>
+            </div>
+
+            <div id="statusMessage" class="status-message" style="display:none;"></div>
+
+            <div class="btn-group">
+                <button class="btn btn-back" onclick="window.location.href='/'">⬅ Back</button>
+                <button class="btn btn-ap" id="apToggleBtn" onclick="toggleAP()">📡 Enable AP Mode</button>
+                <button class="btn btn-save" onclick="saveWiFi()">💾 Save & Reboot</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><a href="/led" class="nav-link">🎨 LED Settings</a></p>
+        </div>
+    </div>
+
+    <script>
+        let apEnabled = false;
+
+        // Показать сообщение о статусе
+        function showStatus(message, type) {
+            const msgEl = document.getElementById('statusMessage');
+            msgEl.textContent = message;
+            msgEl.className = 'status-message ' + type;
+            msgEl.style.display = 'block';
+            setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+        }
+
+        // Сканирование сетей
+        function scanNetworks() {
+            const listEl = document.getElementById('networkList');
+            listEl.innerHTML = '<div style="text-align:center;color:#00d9ff;padding:20px;">Scanning...</div>';
+
+            fetch('/wifi/scan')
+                .then(response => response.json())
+                .then(networks => {
+                    if (networks.length === 0) {
+                        listEl.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">No networks found</div>';
+                        return;
+                    }
+
+                    // Сортировка по RSSI (сигнал)
+                    networks.sort((a, b) => b.rssi - a.rssi);
+
+                    let html = '';
+                    networks.forEach(net => {
+                        const signalBars = getSignalBars(net.rssi);
+                        const secureIcon = net.secure ? '🔒' : '⚠️';
+                        const secureClass = net.secure ? 'network-secure' : 'network-open';
+                        html += '<div class="network-item" onclick="selectNetwork(\'' + escapeSSID(net.ssid) + '\')">';
+                        html += '<span class="network-ssid">' + escapeSSID(net.ssid) + '</span>';
+                        html += '<span>';
+                        html += '<span class="' + secureClass + '">' + secureIcon + '</span> ';
+                        html += '<span class="network-rssi">' + signalBars + ' (' + net.rssi + ' dBm)</span>';
+                        html += '</span></div>';
+                    });
+                    listEl.innerHTML = html;
+                })
+                .catch(error => {
+                    listEl.innerHTML = '<div style="text-align:center;color:#ff3232;padding:20px;">Scan failed</div>';
+                    showStatus('Failed to scan networks', 'error');
+                });
+        }
+
+        // Получить количество "палочек" сигнала
+        function getSignalBars(rssi) {
+            if (rssi >= -50) return '📶📶📶';
+            if (rssi >= -60) return '📶📶📶';
+            if (rssi >= -70) return '📶📶';
+            if (rssi >= -80) return '📶';
+            return '📶';
+        }
+
+        // Экранирование SSID для JavaScript
+        function escapeSSID(ssid) {
+            return ssid.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        // Выбор сети из списка
+        function selectNetwork(ssid) {
+            document.getElementById('ssidInput').value = ssid;
+            document.getElementById('passwordInput').focus();
+        }
+
+        // Переключение AP режима
+        function toggleAP() {
+            const btn = document.getElementById('apToggleBtn');
+            const apStatus = document.getElementById('apStatus');
+
+            if (apEnabled) {
+                // Выключаем AP
+                fetch('/wifi/ap-disable')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            apEnabled = false;
+                            btn.textContent = '📡 Enable AP Mode';
+                            apStatus.style.display = 'none';
+                            showStatus('AP Mode disabled', 'info');
+                        } else {
+                            showStatus('Failed to disable AP', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showStatus('Error: ' + error, 'error');
+                    });
+            } else {
+                // Включаем AP
+                fetch('/wifi/ap-enable')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            apEnabled = true;
+                            btn.textContent = '📡 Disable AP Mode';
+                            document.getElementById('apIP').textContent = data.ip;
+                            apStatus.style.display = 'block';
+                            showStatus('AP Mode enabled. Connect to Banya-Controller network.', 'success');
+                        } else {
+                            showStatus('Failed to enable AP', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showStatus('Error: ' + error, 'error');
+                    });
+            }
+        }
+
+        // Сохранение WiFi настроек
+        function saveWiFi() {
+            const ssid = document.getElementById('ssidInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+            const autoConnect = document.getElementById('autoConnect').checked;
+
+            if (!ssid) {
+                showStatus('Please enter SSID', 'error');
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.append('ssid', ssid);
+            params.append('password', password);
+            params.append('auto', autoConnect ? 'true' : 'false');
+
+            fetch('/wifi/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params.toString()
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('Saved! Device will reboot...', 'success');
+                    setTimeout(() => {
+                        // Перезагрузка не нужна, просто применяем новые настройки
+                        showStatus('WiFi credentials saved successfully!', 'success');
+                    }, 2000);
+                } else {
+                    showStatus('Failed to save: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('Error: ' + error, 'error');
+            });
+        }
+
+        // Загрузка статуса при старте
+        window.onload = function() {
+            // Можно добавить проверку текущего статуса WiFi
+        };
     </script>
 </body>
 </html>

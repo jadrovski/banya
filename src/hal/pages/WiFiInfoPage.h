@@ -39,7 +39,7 @@ public:
         lastUpdate = now;
 
         // Строка 1: WiFi иконка и SSID
-        const char* ssid = wifi->getConfig().ssid;
+        const char* ssid = wifi->getSTAConfig().ssid;
         if (ssid && strlen(ssid) > 0) {
             lcd.line_printf(0, "%c %s", WIFI_CHAR, ssid);
         } else {
