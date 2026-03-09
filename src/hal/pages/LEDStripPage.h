@@ -3,7 +3,6 @@
 
 #include "../DisplayPage.h"
 #include "../RGBLED.h"
-#include "../../LEDController.h"
 
 namespace HAL {
 
@@ -20,7 +19,6 @@ namespace HAL {
 class LEDStripPage : public DisplayPage {
 private:
     RGBLED* ledStrip;
-    LEDStripController* ledController;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
@@ -28,15 +26,12 @@ public:
     /**
      * @brief Конструктор страницы LED strip
      * @param strip Указатель на объект RGBLED
-     * @param controller Указатель на объект LEDStripController (может быть nullptr)
      * @param title Заголовок страницы
      */
     LEDStripPage(RGBLED* strip, 
-                 LEDStripController* controller = nullptr,
                  const String& title = "LED Strip Status")
         : DisplayPage(title, 0),
           ledStrip(strip),
-          ledController(controller),
           lastUpdate(0),
           updateInterval(500) {}
 
@@ -95,19 +90,6 @@ public:
         lcd.setCursor(0, 2);
         lcd.print("Gamma:");
         lcd.print(ledStrip->getConfig().enableGamma ? "ON " : "OFF");
-        
-        // Effect status
-        if (ledController && ledController->isEffectRunning()) {
-            lcd.setCursor(12, 2);
-            lcd.print(" FX:ON ");
-        } else {
-            lcd.setCursor(12, 2);
-            lcd.print("     ");
-        }
-
-        // Row 3: Info or Help
-        lcd.setCursor(0, 3);
-        lcd.print("Serial: R/G/B/W/P/Q ");
     }
 };
 

@@ -4,8 +4,6 @@
 #include "hal/pages/SystemStatusPage.h"
 #include "hal/pages/LEDStripPage.h"
 #include "hal/pages/WiFiSetupPage.h"
-#include "LEDController.h"
-#include "LEDStrip.h"
 #include "color/BanyaColors.h"
 
 // ============================================================================
@@ -99,9 +97,6 @@ HAL::DisplayPage *wifiPage = nullptr;
 HAL::SystemStatusPage *statusPage = nullptr;
 HAL::LEDStripPage *ledStripPage = nullptr;
 HAL::WiFiSetupPage *wifiSetupPage = nullptr;
-
-// Banya-specific LED strip controller
-LEDStripController *pLedController = nullptr;
 
 // ============================================================================
 // Режимы работы
@@ -312,28 +307,6 @@ void handleSerialCommands() {
                 Serial.println("Color: Blue");
                 break;
 
-            // Эффекты
-            case 'P':
-                pLedController->startPulse(BanyaColors::fire(), 3000);
-                Serial.println("Effect: Pulse");
-                break;
-            case 'Q':
-                pLedController->startRainbow(3000);
-                Serial.println("Effect: Rainbow");
-                break;
-            case 'B':
-                pLedController->startBlink(BanyaColors::ice(), 200, 200, 10);
-                Serial.println("Effect: Blink");
-                break;
-            case 'X':
-                pLedController->stopEffect();
-                Serial.println("Effect: Stopped");
-                break;
-            case 'O':
-                pLedController->off();
-                Serial.println("Off");
-                break;
-
             // Информация
             case 'I':
                 Serial.println(ledStrip.getInfo());
@@ -426,9 +399,6 @@ void setup() {
         Serial.println("FAILED");
     }
 
-    // Создание контроллера LED эффектов
-    pLedController = new LEDStripController(&ledStrip);
-
     // Инициализация WiFi Settings (NVS)
     Serial.print("Initializing WiFi Settings (NVS)... ");
     if (wifiSettings.begin()) {
@@ -515,7 +485,7 @@ void setup() {
     wifiPage = new HAL::WiFiInfoPage(&wifi, "WiFi Info");
     wifiSetupPage = new HAL::WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup");
     statusPage = new HAL::SystemStatusPage(&wifi, "System Status");
-    ledStripPage = new HAL::LEDStripPage(&ledStrip, pLedController, "LED Strip");
+    ledStripPage = new HAL::LEDStripPage(&ledStrip, "LED Strip");
 
     // Добавление страниц в менеджер
     pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(dallasPage));
@@ -554,10 +524,6 @@ void setup() {
 
 void loop() {
     handleSerialCommands();
-
-    if (pLedController) {
-        pLedController->handleLoop();
-    }
 
     // Автоматическое обновление температур DS18B20
     ds18b20.handleLoop();

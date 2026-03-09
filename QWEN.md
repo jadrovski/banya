@@ -35,7 +35,6 @@ Touch:     GPIO 15 (T3)
 src/
 ├── main.cpp              # Application entry point, sensor reading, LCD display
 ├── LEDStrip.h/.cpp       # PWM-based RGB LED control with gamma correction
-├── LEDController.h/.cpp  # LED effects controller (fade, blink, pulse, rainbow)
 ├── hal/                  # Hardware Access Layer
 │   ├── HAL.h             # Main HAL include file
 │   ├── I2CDevice.h       # Base class for I2C devices
@@ -61,8 +60,6 @@ src/
 ### Key Classes
 
 - **`LEDStrip`**: Low-level PWM control for RGB LEDs with gamma correction (2.2), brightness control, and basic effects
-- **`BanyaLEDStrip`**: Extends `LEDStrip` with banya-specific modes (temperature, humidity, comfort, safety, relax)
-- **`LEDStripController`**: Manages animated effects (fade, blink, pulse, rainbow) with timing
 - **`HAL::LCD`**: LCD 2004 I2C display with custom character support
 - **`HAL::BME280Sensor`**: BME280 environmental sensor wrapper
 - **`HAL::DS18B20Manager`**: DS18B20 OneWire sensor manager (supports multiple sensors)
@@ -180,7 +177,7 @@ Features:
 
 ### Code Style
 
-- **File naming**: PascalCase for classes (e.g., `LEDController.h`, `LEDStrip.cpp`)
+- **File naming**: PascalCase for classes (e.g., `LEDStrip.cpp`)
 - **Namespaces**: `HAL` for hardware layer, `BanyaColors` for color presets
 - **Includes**: Quotes for local headers, angle brackets for libraries
 - **Guard macros**: `#ifndef BANYA_<NAME>_H` format
