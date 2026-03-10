@@ -85,6 +85,8 @@ public:
         server->on("/led/status", std::bind(&BanyaWebServer::handleLEDStatus, this));
         server->on("/led/set", std::bind(&BanyaWebServer::handleLEDSet, this));
         server->on("/led/brightness", std::bind(&BanyaWebServer::handleLEDBrightness, this));
+        server->on("/led/pwm", std::bind(&BanyaWebServer::handleLEDPWM, this));
+        server->on("/led/gamma", std::bind(&BanyaWebServer::handleLEDGamma, this));
 
         // WiFi configuration endpoints
         server->on("/wifi", std::bind(&BanyaWebServer::handleWiFiPage, this));
@@ -225,13 +227,17 @@ private:
             server->send(500, "application/json", "{\"error\":\"No LED strip\"}");
             return;
         }
-        
+
         RGB color = ledStrip->getCurrentColor();
         String json = "{";
         json += "\"r\":" + String(color.red) + ",";
         json += "\"g\":" + String(color.green) + ",";
         json += "\"b\":" + String(color.blue);
         json += ",\"brightness\":" + String(ledStrip->getBrightness(), 2);
+        json += ",\"frequency\":" + String(ledStrip->getConfig().pwmFrequency);
+        json += ",\"resolution\":" + String(ledStrip->getConfig().pwmResolution);
+        json += ",\"gamma\":" + String(ledStrip->getConfig().gamma, 1);
+        json += ",\"gammaEnabled\":" + String(ledStrip->getConfig().enableGamma ? "true" : "false");
         json += "}";
         server->send(200, "application/json", json);
     }
@@ -267,7 +273,7 @@ private:
             server->send(500, "application/json", "{\"error\":\"No LED strip\"}");
             return;
         }
-        
+
         if (server->hasArg("r") && server->hasArg("g") && server->hasArg("b")) {
             uint8_t r = server->arg("r").toInt();
             uint8_t g = server->arg("g").toInt();
@@ -277,6 +283,100 @@ private:
         } else {
             server->send(400, "application/json", "{\"error\":\"Invalid request\"}");
         }
+    }
+
+    /**
+     * @brief Обработка запроса установки PWM параметров
+     */
+    void handleLEDPWM() {
+        if (!ledStrip) {
+            server->send(500, "application/json", "{\"error\":\"No LED strip\"}");
+            return;
+        }
+
+        bool updated = false;
+        
+        // Update frequency if provided
+        if (server->hasArg("frequency")) {
+            uint32_t freq = server->arg("frequency").toInt();
+            // Valid range: 1000Hz - 20000Hz (ESP32 LEDC typical range)
+            if (freq >= 1000 && freq <= 20000) {
+                const_cast<RGBLEDConfig&>(ledStrip->getConfig()).pwmFrequency = freq;
+                Serial.println("LED PWM: Frequency changed to " + String(freq) + "Hz");
+                updated = true;
+            } else {
+                server->send(400, "application/json", "{\"error\":\"Frequency must be 1000-20000Hz\"}");
+                return;
+            }
+        }
+
+        // Update resolution if provided
+        if (server->hasArg("resolution")) {
+            uint8_t res = server->arg("resolution").toInt();
+            // Valid range: 1-16 bits
+            if (res >= 1 && res <= 16) {
+                const_cast<RGBLEDConfig&>(ledStrip->getConfig()).pwmResolution = res;
+                Serial.println("LED PWM: Resolution changed to " + String(res) + " bits");
+                updated = true;
+            } else {
+                server->send(400, "application/json", "{\"error\":\"Resolution must be 1-16 bits\"}");
+                return;
+            }
+        }
+
+        if (updated) {
+            // Re-initialize PWM with new settings
+            ledStrip->begin();
+            server->send(200, "application/json", "{\"success\":true,\"message\":\"PWM settings updated\"}");
+        } else {
+            // Return current PWM settings
+            String json = "{";
+            json += "\"frequency\":" + String(ledStrip->getConfig().pwmFrequency);
+            json += ",\"resolution\":" + String(ledStrip->getConfig().pwmResolution);
+            json += "}";
+            server->send(200, "application/json", json);
+        }
+    }
+
+    /**
+     * @brief Обработка запроса установки гамма-коррекции
+     */
+    void handleLEDGamma() {
+        if (!ledStrip) {
+            server->send(500, "application/json", "{\"error\":\"No LED strip\"}");
+            return;
+        }
+
+        // Update gamma value if provided
+        if (server->hasArg("value")) {
+            float gamma = server->arg("value").toFloat();
+            // Valid range: 0.1-5.0
+            if (gamma >= 0.1f && gamma <= 5.0f) {
+                ledStrip->setGamma(gamma);
+                Serial.println("LED Gamma: Changed to " + String(gamma, 1));
+                server->send(200, "application/json", "{\"success\":true,\"gamma\":" + String(gamma, 1) + "}");
+                return;
+            } else {
+                server->send(400, "application/json", "{\"error\":\"Gamma must be 0.1-5.0\"}");
+                return;
+            }
+        }
+
+        // Toggle gamma enable if requested
+        if (server->hasArg("enable")) {
+            bool enable = server->arg("enable") == "true";
+            ledStrip->enableGamma(enable);
+            Serial.println("LED Gamma: " + String(enable ? "enabled" : "disabled"));
+            server->send(200, "application/json", "{\"success\":true,\"enabled\":" + String(enable ? "true" : "false") + "}");
+            return;
+        }
+
+        // Return current gamma settings
+        String json = "{";
+        json += "\"gamma\":" + String(ledStrip->getConfig().gamma, 1);
+        json += ",\"enabled\":" + String(ledStrip->getConfig().enableGamma ? "true" : "false");
+        json += "}";
+        server->send(200, "application/json", json);
     }
 
     /**
@@ -880,6 +980,94 @@ h1 {
         .nav-text {
             letter-spacing: 0.3px;
         }
+
+        .pwm-settings {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pwm-settings h3 {
+            color: #00d9ff;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+        }
+
+        .pwm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .pwm-control {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pwm-control label {
+            display: block;
+            font-size: 0.95em;
+            margin-bottom: 10px;
+            color: #00d9ff;
+        }
+
+        .pwm-control input[type="number"],
+        .pwm-control input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1em;
+            outline: none;
+        }
+
+        .pwm-control input[type="number"]:focus,
+        .pwm-control input[type="range"]:focus {
+            border-color: #00d9ff;
+        }
+
+        .pwm-control .value-display {
+            text-align: right;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 5px;
+        }
+
+        .checkbox-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-control input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-control label {
+            margin: 0;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 0.95em;
+        }
+
+        .btn-apply {
+            background: linear-gradient(135deg, #ff9900, #ff6600);
+            color: #fff;
+            margin-top: 20px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -929,11 +1117,47 @@ h1 {
                 <button class="btn btn-off" onclick="setLED(0, 0, 0)">Turn Off</button>
             </div>
         </div>
+
+        <div class="pwm-settings">
+            <h3>⚙️ PWM Settings</h3>
+            <div class="pwm-grid">
+                <div class="pwm-control">
+                    <label>📊 Frequency (Hz)</label>
+                    <input type="number" id="freqInput" min="1000" max="20000" value="1000" step="100">
+                    <div class="value-display" id="freqValue">1000 Hz</div>
+                </div>
+
+                <div class="pwm-control">
+                    <label>🎯 Resolution (bits)</label>
+                    <input type="range" id="resSlider" min="1" max="16" value="8">
+                    <div class="value-display" id="resValue">8 bits</div>
+                </div>
+
+                <div class="pwm-control">
+                    <label>🌟 Gamma Value</label>
+                    <input type="range" id="gammaSlider" min="10" max="50" value="22" step="1">
+                    <div class="value-display" id="gammaValue">2.2</div>
+                </div>
+
+                <div class="pwm-control">
+                    <label>☑️ Gamma Correction</label>
+                    <div class="checkbox-control">
+                        <input type="checkbox" id="gammaEnable" checked>
+                        <label for="gammaEnable">Enable</label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-apply" onclick="applyPWMSettings()">💾 Apply PWM Settings</button>
+        </div>
     </div>
 
     <script>
         let currentR = 0, currentG = 0, currentB = 0;
         let currentBrightness = 0.5;
+        let currentFreq = 1000;
+        let currentRes = 8;
+        let currentGamma = 2.2;
+        let currentGammaEnabled = true;
         let pendingUpdate = null;      // Pending update data
         let isRequestInProgress = false;
         const MIN_UPDATE_INTERVAL = 80; // ms - minimum time between updates
@@ -949,6 +1173,18 @@ h1 {
                     if (data.brightness !== undefined) {
                         currentBrightness = data.brightness;
                     }
+                    if (data.frequency !== undefined) {
+                        currentFreq = data.frequency;
+                    }
+                    if (data.resolution !== undefined) {
+                        currentRes = data.resolution;
+                    }
+                    if (data.gamma !== undefined) {
+                        currentGamma = data.gamma;
+                    }
+                    if (data.gammaEnabled !== undefined) {
+                        currentGammaEnabled = data.gammaEnabled;
+                    }
 
                     document.getElementById('redSlider').value = currentR;
                     document.getElementById('greenSlider').value = currentG;
@@ -959,6 +1195,15 @@ h1 {
                     document.getElementById('greenValue').textContent = currentG;
                     document.getElementById('blueValue').textContent = currentB;
                     document.getElementById('brightnessValue').textContent = Math.round(currentBrightness * 100) + '%';
+
+                    // Update PWM values
+                    document.getElementById('freqInput').value = currentFreq;
+                    document.getElementById('freqValue').textContent = currentFreq + ' Hz';
+                    document.getElementById('resSlider').value = currentRes;
+                    document.getElementById('resValue').textContent = currentRes + ' bits';
+                    document.getElementById('gammaSlider').value = Math.round(currentGamma * 10);
+                    document.getElementById('gammaValue').textContent = currentGamma.toFixed(1);
+                    document.getElementById('gammaEnable').checked = currentGammaEnabled;
 
                     updatePreview();
                 })
@@ -1069,6 +1314,71 @@ h1 {
             updatePreview();
             setBrightness(this.value);
         });
+
+        // PWM Settings handlers
+        document.getElementById('freqInput').addEventListener('change', function() {
+            document.getElementById('freqValue').textContent = this.value + ' Hz';
+        });
+
+        document.getElementById('resSlider').addEventListener('input', function() {
+            document.getElementById('resValue').textContent = this.value + ' bits';
+        });
+
+        document.getElementById('gammaSlider').addEventListener('input', function() {
+            document.getElementById('gammaValue').textContent = (this.value / 10).toFixed(1);
+        });
+
+        // Apply PWM settings to the server
+        function applyPWMSettings() {
+            const freq = document.getElementById('freqInput').value;
+            const res = document.getElementById('resSlider').value;
+            const gamma = document.getElementById('gammaSlider').value / 10;
+            const gammaEnable = document.getElementById('gammaEnable').checked;
+
+            // Validate frequency
+            if (freq < 1000 || freq > 20000) {
+                alert('Frequency must be between 1000 and 20000 Hz');
+                return;
+            }
+
+            // Send PWM settings
+            fetch('/led/pwm?frequency=' + freq + '&resolution=' + res)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentFreq = parseInt(freq);
+                        currentRes = parseInt(res);
+                        // Update gamma settings
+                        fetch('/led/gamma?value=' + gamma)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    currentGamma = gamma;
+                                    // Update gamma enable
+                                    fetch('/led/gamma?enable=' + (gammaEnable ? 'true' : 'false'))
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.success) {
+                                                currentGammaEnabled = gammaEnable;
+                                                alert('PWM settings applied successfully!');
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error('Error updating gamma enable:', error);
+                                        });
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error updating gamma:', error);
+                            });
+                    } else {
+                        alert('Error: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    alert('Error applying PWM settings: ' + error);
+                });
+        }
 
         // Загрузка при старте
         loadLEDStatus();
