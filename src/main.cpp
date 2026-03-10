@@ -99,22 +99,6 @@ HAL::LEDStripPage *ledStripPage = nullptr;
 HAL::WiFiSetupPage *wifiSetupPage = nullptr;
 
 // ============================================================================
-// Режимы работы
-// ============================================================================
-
-enum BanyaMode {
-    MODE_AUTO,
-    MODE_TEMPERATURE,
-    MODE_HUMIDITY,
-    MODE_COMFORT,
-    MODE_SAFETY,
-    MODE_RELAX,
-    MODE_MANUAL
-};
-
-BanyaMode currentMode = MODE_AUTO;
-
-// ============================================================================
 // Функции LCD
 // ============================================================================
 
@@ -151,10 +135,6 @@ HAL::BanyaStatus getBanyaStatus() {
     // WiFi
     status.wifiIP = wifi.getIPAddressString();
     status.wifiStatus = wifi.getStatusString();
-
-    // Режим
-    const char *modeNames[] = {"Auto", "Temp", "Humidity", "Comfort", "Safety", "Relax", "Manual"};
-    status.mode = modeNames[currentMode];
 
     return status;
 }
@@ -210,42 +190,6 @@ void handleSerialCommands() {
         cmd = toupper(cmd);
 
         switch (cmd) {
-            case 'A':
-                currentMode = MODE_AUTO;
-                Serial.println("Mode: Auto");
-                if (statusPage) statusPage->setMode("Auto");
-                break;
-            case 'T':
-                currentMode = MODE_TEMPERATURE;
-                Serial.println("Mode: Temperature");
-                if (statusPage) statusPage->setMode("Temp");
-                break;
-            case 'H':
-                currentMode = MODE_HUMIDITY;
-                Serial.println("Mode: Humidity");
-                if (statusPage) statusPage->setMode("Humidity");
-                break;
-            case 'C':
-                currentMode = MODE_COMFORT;
-                Serial.println("Mode: Comfort");
-                if (statusPage) statusPage->setMode("Comfort");
-                break;
-            case 'S':
-                currentMode = MODE_SAFETY;
-                Serial.println("Mode: Safety");
-                if (statusPage) statusPage->setMode("Safety");
-                break;
-            case 'R':
-                currentMode = MODE_RELAX;
-                Serial.println("Mode: Relax");
-                if (statusPage) statusPage->setMode("Relax");
-                break;
-            case 'M':
-                currentMode = MODE_MANUAL;
-                Serial.println("Mode: Manual");
-                if (statusPage) statusPage->setMode("Manual");
-                break;
-
             // Управление яркостью (0-9)
             case '0': ledStrip.setBrightness(0.005);
                 break;
@@ -289,8 +233,6 @@ void handleSerialCommands() {
             // Информация
             case 'I':
                 Serial.println(ledStrip.getInfo());
-                Serial.printf("Mode: %d, Brightness: %.0f%%\n",
-                              currentMode, ledStrip.getBrightness() * 100);
                 break;
 
             // HAL диагностика
@@ -488,7 +430,6 @@ void setup() {
 
     // Вывод информации о режимах
     Serial.println("\n=== Commands ===");
-    Serial.println("Modes: A=Auto, T=Temp, H=Humidity, C=Comfort, S=Safety, R=Relax, M=Manual");
     Serial.println("Manual: 0-9=Brightness, R/G/B/W=Colors, +=Warmer, -=Cooler");
     Serial.println("Effects: P=Pulse, Q=Rainbow, B=Blink, X=Stop, O=Off");
     Serial.println("Pages: > or . = Next, < or , = Prev, Touch Tap = Next");

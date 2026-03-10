@@ -31,7 +31,6 @@ struct BanyaStatus {
     bool sensor2Connected;
     String wifiIP;
     String wifiStatus;
-    String mode;
 
     BanyaStatus() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
                    sensor1Connected(false), sensor2Connected(false) {}
@@ -185,7 +184,7 @@ private:
     void handleStatus() {
         if (statusProvider) {
             BanyaStatus status = statusProvider();
-            
+
             String json = "{";
             json += "\"temp1\":" + String(status.temp1, 1) + ",";
             json += "\"temp2\":" + String(status.temp2, 1) + ",";
@@ -194,10 +193,9 @@ private:
             json += "\"pressure\":" + String(status.pressure, 1) + ",";
             json += "\"sensor1\":" + String(status.sensor1Connected ? "true" : "false") + ",";
             json += "\"sensor2\":" + String(status.sensor2Connected ? "true" : "false") + ",";
-            json += "\"wifi\":\"" + status.wifiIP + "\",";
-            json += "\"mode\":\"" + status.mode + "\"";
+            json += "\"wifi\":\"" + status.wifiIP + "\"";
             json += "}";
-            
+
             server->send(200, "application/json", json);
         } else {
             server->send(500, "application/json", "{\"error\":\"No status provider\"}");
@@ -414,7 +412,6 @@ private:
         
         <div class="status-bar">
             <span id="wifi-status">WiFi: --</span>
-            <span id="mode-display">Mode: --</span>
         </div>
         
         <div class="sensors-grid">
@@ -486,10 +483,9 @@ private:
                     document.getElementById('sensor2-status').textContent = data.sensor2 ? 'OK' : '---';
                     document.getElementById('sensor1-status').className = 'status ' + (data.sensor1 ? 'ok' : 'error');
                     document.getElementById('sensor2-status').className = 'status ' + (data.sensor2 ? 'ok' : 'error');
-                    
+
                     document.getElementById('wifi-status').textContent = 'WiFi: ' + data.wifi;
-                    document.getElementById('mode-display').textContent = 'Mode: ' + data.mode;
-                    
+
                     const now = new Date();
                     document.getElementById('last-update').textContent = now.toLocaleTimeString();
                 })
@@ -552,7 +548,7 @@ h1 {
     backdrop-filter: blur(10px);
 }
 
-#wifi-status, #mode-display {
+#wifi-status {
     font-size: 0.9em;
     color: #aaa;
 }

@@ -17,7 +17,6 @@ namespace HAL {
 class SystemStatusPage : public DisplayPage {
 private:
     WiFiManager* wifi;
-    String currentMode;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
@@ -27,10 +26,6 @@ public:
           wifi(mgr),
           lastUpdate(0),
           updateInterval(1000) {}
-
-    void setMode(const String& mode) {
-        currentMode = mode;
-    }
 
     void onEnter() override {
         DisplayPage::onEnter();
