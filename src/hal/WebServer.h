@@ -5,6 +5,7 @@
 #include <WebServer.h>
 #include "WiFi.h"
 #include "WiFiSettings.h"
+#include "RGBLED.h"
 
 namespace HAL {
 
@@ -13,7 +14,7 @@ namespace HAL {
  */
 struct WebServerConfig {
     uint16_t port;        // Порт сервера (по умолчанию 80)
-    
+
     WebServerConfig(uint16_t p = 80) : port(p) {}
 };
 
@@ -31,7 +32,7 @@ struct BanyaStatus {
     String wifiIP;
     String wifiStatus;
     String mode;
-    
+
     BanyaStatus() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
                    sensor1Connected(false), sensor2Connected(false) {}
 };
@@ -50,8 +51,7 @@ private:
     WebServerConfig config;
     std::unique_ptr<WebServer> server;
     std::function<BanyaStatus()> statusProvider;
-    std::function<RGB()> getLedColor;
-    std::function<void(RGB)> setLedColor;
+    RGBLED* ledStrip;
     WiFiManager* wifiManager;
     WiFiSettings* wifiSettings;
     bool running;
@@ -60,10 +60,11 @@ public:
     /**
      * @brief Конструктор веб-сервера
      * @param cfg Конфигурация
+     * @param led Указатель на RGBLED
      */
-    explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig())
-        : config(cfg), server(nullptr), statusProvider(nullptr), getLedColor(nullptr),
-          setLedColor(nullptr), wifiManager(nullptr), wifiSettings(nullptr),
+    explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig(), RGBLED* led = nullptr)
+        : config(cfg), server(nullptr), statusProvider(nullptr), ledStrip(led),
+          wifiManager(nullptr), wifiSettings(nullptr),
           running(false) {}
 
     ~BanyaWebServer() {
@@ -84,7 +85,8 @@ public:
         server->on("/led", std::bind(&BanyaWebServer::handleLEDPage, this));
         server->on("/led/status", std::bind(&BanyaWebServer::handleLEDStatus, this));
         server->on("/led/set", std::bind(&BanyaWebServer::handleLEDSet, this));
-        
+        server->on("/led/brightness", std::bind(&BanyaWebServer::handleLEDBrightness, this));
+
         // WiFi configuration endpoints
         server->on("/wifi", std::bind(&BanyaWebServer::handleWiFiPage, this));
         server->on("/wifi/save", std::bind(&BanyaWebServer::handleWiFiSave, this));
@@ -140,13 +142,11 @@ public:
     }
 
     /**
-     * @brief Установить функции для управления LED
-     * @param getColor Функция получения текущего цвета
-     * @param setColor Функция установки цвета
+     * @brief Установить указатель на RGBLED
+     * @param led Указатель на RGBLED
      */
-    void setLEDControl(std::function<RGB()> getColor, std::function<void(RGB)> setColor) {
-        getLedColor = getColor;
-        setLedColor = setColor;
+    void setLEDStrip(RGBLED* led) {
+        ledStrip = led;
     }
 
     /**
@@ -223,16 +223,41 @@ private:
      * @brief Обработка запроса статуса LED
      */
     void handleLEDStatus() {
-        if (getLedColor) {
-            RGB color = getLedColor();
-            String json = "{";
-            json += "\"r\":" + String(color.red) + ",";
-            json += "\"g\":" + String(color.green) + ",";
-            json += "\"b\":" + String(color.blue);
-            json += "}";
-            server->send(200, "application/json", json);
+        if (!ledStrip) {
+            server->send(500, "application/json", "{\"error\":\"No LED strip\"}");
+            return;
+        }
+        
+        RGB color = ledStrip->getCurrentColor();
+        String json = "{";
+        json += "\"r\":" + String(color.red) + ",";
+        json += "\"g\":" + String(color.green) + ",";
+        json += "\"b\":" + String(color.blue);
+        json += ",\"brightness\":" + String(ledStrip->getBrightness(), 2);
+        json += "}";
+        server->send(200, "application/json", json);
+    }
+
+    /**
+     * @brief Обработка запроса установки яркости LED
+     */
+    void handleLEDBrightness() {
+        if (!ledStrip) {
+            server->send(500, "application/json", "{\"error\":\"No LED strip\"}");
+            return;
+        }
+
+        if (server->hasArg("brightness")) {
+            float brightness = server->arg("brightness").toFloat();
+            // Clamp brightness to 0.0-1.0 range
+            if (brightness < 0.0f) brightness = 0.0f;
+            if (brightness > 1.0f) brightness = 1.0f;
+            ledStrip->setBrightness(brightness);
+            server->send(200, "application/json", "{\"success\":true,\"brightness\":" + String(brightness, 2) + "}");
         } else {
-            server->send(500, "application/json", "{\"error\":\"No LED control\"}");
+            // Return current brightness
+            float brightness = ledStrip->getBrightness();
+            server->send(200, "application/json", "{\"brightness\":" + String(brightness, 2) + "}");
         }
     }
 
@@ -240,11 +265,16 @@ private:
      * @brief Обработка запроса установки LED цвета
      */
     void handleLEDSet() {
-        if (setLedColor && server->hasArg("r") && server->hasArg("g") && server->hasArg("b")) {
+        if (!ledStrip) {
+            server->send(500, "application/json", "{\"error\":\"No LED strip\"}");
+            return;
+        }
+        
+        if (server->hasArg("r") && server->hasArg("g") && server->hasArg("b")) {
             uint8_t r = server->arg("r").toInt();
             uint8_t g = server->arg("g").toInt();
             uint8_t b = server->arg("b").toInt();
-            setLedColor(RGB(r, g, b));
+            ledStrip->setColor(RGB(r, g, b));
             server->send(200, "application/json", "{\"success\":true}");
         } else {
             server->send(400, "application/json", "{\"error\":\"Invalid request\"}");
@@ -742,6 +772,10 @@ h1 {
             background: #00d9ff;
         }
 
+        .slider-group.brightness input[type="range"]::-webkit-slider-thumb {
+            background: linear-gradient(135deg, #ff9900, #ff6600);
+        }
+
         .slider-value {
             text-align: right;
             font-size: 1.5em;
@@ -888,6 +922,12 @@ h1 {
                 <div class="slider-value" id="blueValue">0</div>
             </div>
 
+            <div class="slider-group brightness">
+                <label>💡 Brightness</label>
+                <input type="range" id="brightnessSlider" min="0" max="100" value="50">
+                <div class="slider-value" id="brightnessValue">50%</div>
+            </div>
+
             <div class="btn-group">
                 <button class="btn btn-back" onclick="window.location.href='/'">⬅ Back</button>
                 <button class="btn btn-off" onclick="setLED(0, 0, 0)">Turn Off</button>
@@ -897,6 +937,7 @@ h1 {
 
     <script>
         let currentR = 0, currentG = 0, currentB = 0;
+        let currentBrightness = 0.5;
 
         // Загрузка текущих значений
         function loadLEDStatus() {
@@ -906,14 +947,19 @@ h1 {
                     currentR = data.r;
                     currentG = data.g;
                     currentB = data.b;
+                    if (data.brightness !== undefined) {
+                        currentBrightness = data.brightness;
+                    }
 
                     document.getElementById('redSlider').value = currentR;
                     document.getElementById('greenSlider').value = currentG;
                     document.getElementById('blueSlider').value = currentB;
+                    document.getElementById('brightnessSlider').value = Math.round(currentBrightness * 100);
 
                     document.getElementById('redValue').textContent = currentR;
                     document.getElementById('greenValue').textContent = currentG;
                     document.getElementById('blueValue').textContent = currentB;
+                    document.getElementById('brightnessValue').textContent = Math.round(currentBrightness * 100) + '%';
 
                     updatePreview();
                 })
@@ -927,13 +973,20 @@ h1 {
             const r = document.getElementById('redSlider').value;
             const g = document.getElementById('greenSlider').value;
             const b = document.getElementById('blueSlider').value;
+            const brightness = document.getElementById('brightnessSlider').value / 100;
 
             document.getElementById('redValue').textContent = r;
             document.getElementById('greenValue').textContent = g;
             document.getElementById('blueValue').textContent = b;
+            document.getElementById('brightnessValue').textContent = Math.round(brightness * 100) + '%';
 
-            document.getElementById('colorPreview').style.backgroundColor = 
-                'rgb(' + r + ', ' + g + ', ' + b + ')';
+            // Apply brightness to preview (darken the color)
+            const adjustedR = Math.round(r * brightness);
+            const adjustedG = Math.round(g * brightness);
+            const adjustedB = Math.round(b * brightness);
+
+            document.getElementById('colorPreview').style.backgroundColor =
+                'rgb(' + adjustedR + ', ' + adjustedG + ', ' + adjustedB + ')';
         }
 
         // Установка цвета на сервер
@@ -952,6 +1005,22 @@ h1 {
                 });
         }
 
+        // Установка яркости
+        function setBrightness(brightnessPercent) {
+            const brightness = brightnessPercent / 100;
+            fetch('/led/brightness?brightness=' + brightness)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentBrightness = data.brightness;
+                        updatePreview();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error setting brightness:', error);
+                });
+        }
+
         // Обработчики изменений слайдеров (применение цвета)
         document.getElementById('redSlider').addEventListener('input', function() {
             updatePreview();
@@ -964,6 +1033,10 @@ h1 {
         document.getElementById('blueSlider').addEventListener('input', function() {
             updatePreview();
             setLED(document.getElementById('redSlider').value, document.getElementById('greenSlider').value, this.value);
+        });
+        document.getElementById('brightnessSlider').addEventListener('input', function() {
+            updatePreview();
+            setBrightness(this.value);
         });
 
         // Загрузка при старте

@@ -160,27 +160,6 @@ HAL::BanyaStatus getBanyaStatus() {
 }
 
 // ============================================================================
-// LED контроль для веб-интерфейса
-// ============================================================================
-
-/**
- * @brief Получить текущий цвет LED
- */
-RGB getLEDColor() {
-    return ledStrip.getCurrentColor();
-}
-
-/**
- * @brief Установить цвет LED
- * @param color RGB цвет
- */
-void setLEDColor(RGB color) {
-    ledStrip.setColor(color);
-    currentMode = MODE_MANUAL;
-    if (statusPage) statusPage->setMode("Manual");
-}
-
-// ============================================================================
 // Обработка событий Touch сенсора
 // ============================================================================
 
@@ -362,6 +341,9 @@ void setup() {
     Serial.begin(115200);
     Serial.println("\n=== Banya Controller HAL ===");
 
+    Wire.begin();
+    Wire.setClock(100000);
+
     // Инициализация LCD
     Serial.print("Initializing LCD... ");
     if (lcd.begin()) {
@@ -443,7 +425,7 @@ void setup() {
     // Запуск веб-сервера (всегда, даже если WiFi не подключён)
     webServer.begin();
     webServer.setStatusProvider(getBanyaStatus);
-    webServer.setLEDControl(getLEDColor, setLEDColor);
+    webServer.setLEDStrip(&ledStrip);
     webServer.setWiFiManager(&wifi);
     webServer.setWiFiSettings(&wifiSettings);
     webServer.start();
