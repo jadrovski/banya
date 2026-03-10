@@ -445,6 +445,9 @@ void setup() {
 // Loop
 // ============================================================================
 
+constexpr unsigned long LCD_CHECK_INTERVAL = 5000; // 5 секунд
+unsigned long lastLcdCheck = 0;
+
 void loop() {
     handleSerialCommands();
 
@@ -461,4 +464,14 @@ void loop() {
     touch.handleLoop();
 
     pageMgr.handleLoop();
+
+    // Проверка подключения LCD (периодически)
+    unsigned long now = millis();
+    if (now - lastLcdCheck >= LCD_CHECK_INTERVAL) {
+        lastLcdCheck = now;
+        if (!lcd.isConnected()) {
+            Serial.println("LCD: Reconnecting...");
+            lcd.begin();
+        }
+    }
 }

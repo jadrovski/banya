@@ -110,7 +110,6 @@ public:
         if (currentPageIndex >= pages.size() || !pages[currentPageIndex] || !lcd) {
             return;
         }
-
         pages[currentPageIndex]->render(*lcd, force);
     }
 
