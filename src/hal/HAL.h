@@ -41,5 +41,6 @@
 #include "hal/WebServer.h"
 #include "hal/Touch.h"
 #include "hal/DisplayPages.h"
+#include "../IntervalTimer.h"
 
 #endif // BANYA_HAL_H
