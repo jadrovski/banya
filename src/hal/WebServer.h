@@ -934,6 +934,9 @@ h1 {
     <script>
         let currentR = 0, currentG = 0, currentB = 0;
         let currentBrightness = 0.5;
+        let pendingUpdate = null;      // Pending update data
+        let isRequestInProgress = false;
+        const MIN_UPDATE_INTERVAL = 80; // ms - minimum time between updates
 
         // Загрузка текущих значений
         function loadLEDStatus() {
@@ -964,7 +967,7 @@ h1 {
                 });
         }
 
-        // Обновление предпросмотра цвета
+        // Обновление предпросмотра цвета (мгновенно, без запроса к серверу)
         function updatePreview() {
             const r = document.getElementById('redSlider').value;
             const g = document.getElementById('greenSlider').value;
@@ -985,51 +988,83 @@ h1 {
                 'rgb(' + adjustedR + ', ' + adjustedG + ', ' + adjustedB + ')';
         }
 
-        // Установка цвета на сервер
-        function setLED(r, g, b) {
-            fetch('/led/set?r=' + r + '&g=' + g + '&b=' + b)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        currentR = r;
-                        currentG = g;
-                        currentB = b;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error setting LED:', error);
-                });
-        }
+        // Process pending update (throttled)
+        function processPendingUpdate() {
+            if (!pendingUpdate || isRequestInProgress) {
+                return;
+            }
 
-        // Установка яркости
-        function setBrightness(brightnessPercent) {
-            const brightness = brightnessPercent / 100;
-            fetch('/led/brightness?brightness=' + brightness)
+            isRequestInProgress = true;
+            const update = pendingUpdate;
+            pendingUpdate = null;
+
+            fetch(update.url)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
+                    if (update.type === 'color' && data.success) {
+                        currentR = update.r;
+                        currentG = update.g;
+                        currentB = update.b;
+                    } else if (update.type === 'brightness' && data.success) {
                         currentBrightness = data.brightness;
-                        updatePreview();
                     }
                 })
                 .catch(error => {
-                    console.error('Error setting brightness:', error);
+                    console.error('Error updating LED:', error);
+                })
+                .finally(() => {
+                    isRequestInProgress = false;
+                    // Process any pending update that arrived during the request
+                    if (pendingUpdate) {
+                        setTimeout(processPendingUpdate, MIN_UPDATE_INTERVAL);
+                    }
                 });
         }
 
-        // Обработчики изменений слайдеров (применение цвета)
+        // Установка цвета на сервер (throttled - sends after previous completes)
+        function setLED(r, g, b) {
+            pendingUpdate = {
+                type: 'color',
+                url: '/led/set?r=' + r + '&g=' + g + '&b=' + b,
+                r: r,
+                g: g,
+                b: b
+            };
+            
+            if (!isRequestInProgress) {
+                setTimeout(processPendingUpdate, MIN_UPDATE_INTERVAL);
+            }
+        }
+
+        // Установка яркости (throttled - sends after previous completes)
+        function setBrightness(brightnessPercent) {
+            pendingUpdate = {
+                type: 'brightness',
+                url: '/led/brightness?brightness=' + (brightnessPercent / 100)
+            };
+            
+            if (!isRequestInProgress) {
+                setTimeout(processPendingUpdate, MIN_UPDATE_INTERVAL);
+            }
+        }
+
+        // Обработчики изменений слайдеров:
+        // - input: обновляем предпросмотр + отправляем запрос (с throttle)
         document.getElementById('redSlider').addEventListener('input', function() {
             updatePreview();
             setLED(this.value, document.getElementById('greenSlider').value, document.getElementById('blueSlider').value);
         });
+        
         document.getElementById('greenSlider').addEventListener('input', function() {
             updatePreview();
             setLED(document.getElementById('redSlider').value, this.value, document.getElementById('blueSlider').value);
         });
+        
         document.getElementById('blueSlider').addEventListener('input', function() {
             updatePreview();
             setLED(document.getElementById('redSlider').value, document.getElementById('greenSlider').value, this.value);
         });
+        
         document.getElementById('brightnessSlider').addEventListener('input', function() {
             updatePreview();
             setBrightness(this.value);
