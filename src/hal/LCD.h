@@ -97,6 +97,7 @@ namespace HAL {
         bool begin() override {
             lcd = new LiquidCrystal_I2C(config.i2cAddress,2,1,0,4,5,6,7,3,POSITIVE);
             lcd->begin(config.columns, config.rows, LCD_5x8DOTS);
+            Wire.setClock(50000);
 
             // Проверяем наличие дисплея на шине I2C
             if (!I2CDevice::isConnected()) {

@@ -281,9 +281,6 @@ void setup() {
     Serial.begin(115200);
     Serial.println("\n=== Banya Controller HAL ===");
 
-    Wire.begin();
-    Wire.setClock(100000);
-
     // Инициализация LCD
     Serial.print("Initializing LCD... ");
     if (lcd.begin()) {
