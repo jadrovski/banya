@@ -36,8 +36,6 @@ constexpr uint8_t LEDC_CHANNEL_R = 0;
 constexpr uint8_t LEDC_CHANNEL_G = 1;
 constexpr uint8_t LEDC_CHANNEL_B = 2;
 
-// WiFi конфигурация (credentials хранятся в NVS через AP+Storage)
-// WIFI_SSID и WIFI_PASSWORD определяются в platformio.ini как пустые placeholder'ы
 constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM3; // Touch конфигурация (используем T3 = GPIO15)
 constexpr float TOUCH_THRESHOLD_PERCENT = 0.8f; // Порог срабатывания тача (% от baseline)
 constexpr uint32_t TOUCH_DEBOUNCE_MS = 50;
@@ -109,7 +107,7 @@ void displayWelcome() {
     lcd.write(RUSSIAN_YA_CHAR);
     lcd.setCursor(8, 2);
     lcd.print("v1.0");
-    delay(500);
+    delay(1000);
     lcd.clear();
     delay(500);
 }
