@@ -6,6 +6,7 @@
 #include "WiFi.h"
 #include "WiFiSettings.h"
 #include "RGBLED.h"
+#include "LCD.h"
 
 namespace HAL {
 
@@ -53,6 +54,7 @@ private:
     RGBLED* ledStrip;
     WiFiManager* wifiManager;
     WiFiSettings* wifiSettings;
+    LCD* lcd;
     bool running;
 
 public:
@@ -63,7 +65,7 @@ public:
      */
     explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig(), RGBLED* led = nullptr)
         : config(cfg), server(nullptr), statusProvider(nullptr), ledStrip(led),
-          wifiManager(nullptr), wifiSettings(nullptr),
+          wifiManager(nullptr), wifiSettings(nullptr), lcd(nullptr),
           running(false) {}
 
     ~BanyaWebServer() {
@@ -97,6 +99,8 @@ public:
 
         // System endpoints
         server->on("/reboot", std::bind(&BanyaWebServer::handleReboot, this));
+        server->on("/i2c/reset", std::bind(&BanyaWebServer::handleI2CReset, this));
+        server->on("/lcd/reboot", std::bind(&BanyaWebServer::handleLCDReboot, this));
 
         server->onNotFound(std::bind(&BanyaWebServer::handleNotFound, this));
 
@@ -164,6 +168,14 @@ public:
      */
     void setWiFiSettings(WiFiSettings* settings) {
         wifiSettings = settings;
+    }
+
+    /**
+     * @brief Установить указатель на LCD
+     * @param lcd Указатель на LCD
+     */
+    void setLCD(LCD* display) {
+        lcd = display;
     }
 
     /**
@@ -296,16 +308,20 @@ private:
 
         bool updated = false;
         
+        // Save current color state before changes
+        RGB savedColor = ledStrip->getCurrentColor();
+        float savedBrightness = ledStrip->getBrightness();
+        
         // Update frequency if provided
         if (server->hasArg("frequency")) {
             uint32_t freq = server->arg("frequency").toInt();
-            // Valid range: 1000Hz - 20000Hz (ESP32 LEDC typical range)
-            if (freq >= 1000 && freq <= 20000) {
+            // Valid range: 1Hz - 20000Hz (ESP32 LEDC typical range)
+            if (freq >= 1 && freq <= 20000) {
                 const_cast<RGBLEDConfig&>(ledStrip->getConfig()).pwmFrequency = freq;
                 Serial.println("LED PWM: Frequency changed to " + String(freq) + "Hz");
                 updated = true;
             } else {
-                server->send(400, "application/json", "{\"error\":\"Frequency must be 1000-20000Hz\"}");
+                server->send(400, "application/json", "{\"error\":\"Frequency must be 1-20000Hz\"}");
                 return;
             }
         }
@@ -327,6 +343,9 @@ private:
         if (updated) {
             // Re-initialize PWM with new settings
             ledStrip->begin();
+            // Restore previous color and brightness
+            ledStrip->setColor(savedColor);
+            ledStrip->setBrightness(savedBrightness);
             server->send(200, "application/json", "{\"success\":true,\"message\":\"PWM settings updated\"}");
         } else {
             // Return current PWM settings
@@ -434,6 +453,61 @@ private:
         server->send(200, "application/json", "{\"success\":true,\"message\":\"Rebooting...\"}");
         delay(100); // Даем время на отправку ответа
         ESP.restart();
+    }
+
+    /**
+     * @brief Обработка сброса I2C шины
+     */
+    void handleI2CReset() {
+        Serial.println("System: I2C reset requested via web interface");
+
+        // I2C пины
+        constexpr uint8_t SDA = 21;
+        constexpr uint8_t SCL = 22;
+
+        // Останавливаем Wire
+        Wire.end();
+
+        // Настраиваем пины как выходы
+        pinMode(SDA, OUTPUT);
+        pinMode(SCL, OUTPUT);
+
+        // Toggle SCL to release stuck device (9 clock pulses)
+        for (int i = 0; i < 9; i++) {
+            digitalWrite(SCL, HIGH);
+            delayMicroseconds(5);
+            digitalWrite(SCL, LOW);
+            delayMicroseconds(5);
+        }
+
+        // Восстанавливаем I2C
+        Wire.begin(SDA, SCL);
+        Wire.setClock(100000);
+
+        Serial.println("System: I2C bus reset completed");
+        server->send(200, "application/json", "{\"success\":true,\"message\":\"I2C bus reset completed\"}");
+    }
+
+    /**
+     * @brief Обработка перезагрузки LCD дисплея
+     */
+    void handleLCDReboot() {
+        if (!lcd) {
+            server->send(500, "application/json", "{\"error\":\"No LCD instance\"}");
+            return;
+        }
+
+        Serial.println("System: LCD reboot requested via web interface");
+
+        bool success = lcd->reboot();
+
+        if (success) {
+            Serial.println("System: LCD reboot completed successfully");
+            server->send(200, "application/json", "{\"success\":true,\"message\":\"LCD display rebooted successfully\"}");
+        } else {
+            Serial.println("System: LCD reboot failed - display not found");
+            server->send(500, "application/json", "{\"success\":false,\"error\":\"LCD display not found after reboot\"}");
+        }
     }
 
     /**
@@ -562,11 +636,83 @@ private:
             </a>
         </nav>
 
+        <div class="system-section">
+            <button id="reboot-btn" class="reboot-btn" onclick="rebootDevice()">
+                <span class="btn-icon">🔄</span>
+                <span>Reboot Device</span>
+            </button>
+            <button id="i2c-reset-btn" class="reboot-btn" onclick="resetI2C()">
+                <span class="btn-icon">🔌</span>
+                <span>Reset I2C Bus</span>
+            </button>
+            <button id="lcd-reboot-btn" class="reboot-btn" onclick="rebootLCD()">
+                <span class="btn-icon">🖥️</span>
+                <span>Reboot LCD</span>
+            </button>
+        </div>
+
         <div class="footer">
             <p>Last update: <span id="last-update">--:--:--</span></p>
             <p>Auto-refresh: <span id="refresh-status">ON</span></p>
         </div>
     </div>
+
+    <script>
+        function rebootDevice() {
+            if (confirm('Are you sure you want to reboot the device?')) {
+                fetch('/reboot')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.body.innerHTML = '<div class="container"><h1>🔄 Rebooting...</h1><p>The device is restarting. This page will reload automatically.</p></div>';
+                            setTimeout(() => {
+                                location.reload();
+                            }, 5000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to reboot device');
+                    });
+            }
+        }
+
+        function resetI2C() {
+            if (confirm('Are you sure you want to reset the I2C bus? This may temporarily disconnect I2C devices.')) {
+                fetch('/i2c/reset')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('I2C bus reset completed successfully!');
+                        } else {
+                            alert('Failed to reset I2C bus: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to reset I2C bus');
+                    });
+            }
+        }
+
+        function rebootLCD() {
+            if (confirm('Are you sure you want to reboot the LCD display? The screen will briefly go blank.')) {
+                fetch('/lcd/reboot')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('LCD display rebooted successfully!');
+                        } else {
+                            alert('Failed to reboot LCD: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to reboot LCD');
+                    });
+            }
+        }
+    </script>
     
     <script>
         function updateStatus() {
@@ -766,6 +912,47 @@ h1 {
     letter-spacing: 0.3px;
 }
 
+/* System Section */
+.system-section {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.reboot-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, rgba(255, 100, 100, 0.2), rgba(255, 50, 50, 0.2));
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 50, 50, 0.2);
+}
+
+.reboot-btn:hover {
+    background: linear-gradient(135deg, rgba(255, 100, 100, 0.4), rgba(255, 50, 50, 0.4));
+    border-color: rgba(255, 100, 100, 0.6);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 50, 50, 0.4);
+}
+
+.reboot-btn:active {
+    transform: translateY(-1px);
+}
+
+.btn-icon {
+    font-size: 1.2em;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
 .footer {
     text-align: center;
     color: #666;
@@ -888,49 +1075,6 @@ h1 {
             margin-bottom: 20px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
             border: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 15px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-save {
-            background: linear-gradient(135deg, #00d9ff, #00ff64);
-            color: #1a1a2e;
-        }
-
-        .btn-off {
-            background: rgba(255, 50, 50, 0.3);
-            color: #ff3232;
-            border: 1px solid rgba(255, 50, 50, 0.5);
-        }
-
-        .btn-back {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .top-nav {
@@ -1061,13 +1205,6 @@ h1 {
             color: #aaa;
             font-size: 0.95em;
         }
-
-        .btn-apply {
-            background: linear-gradient(135deg, #ff9900, #ff6600);
-            color: #fff;
-            margin-top: 20px;
-            width: 100%;
-        }
     </style>
 </head>
 <body>
@@ -1111,11 +1248,6 @@ h1 {
                 <input type="range" id="brightnessSlider" min="0" max="100" value="50">
                 <div class="slider-value" id="brightnessValue">50%</div>
             </div>
-
-            <div class="btn-group">
-                <button class="btn btn-back" onclick="window.location.href='/'">⬅ Back</button>
-                <button class="btn btn-off" onclick="setLED(0, 0, 0)">Turn Off</button>
-            </div>
         </div>
 
         <div class="pwm-settings">
@@ -1123,7 +1255,7 @@ h1 {
             <div class="pwm-grid">
                 <div class="pwm-control">
                     <label>📊 Frequency (Hz)</label>
-                    <input type="number" id="freqInput" min="1000" max="20000" value="1000" step="100">
+                    <input type="number" id="freqInput" min="1" max="20000" value="1000" step="1">
                     <div class="value-display" id="freqValue">1000 Hz</div>
                 </div>
 
@@ -1147,7 +1279,6 @@ h1 {
                     </div>
                 </div>
             </div>
-            <button class="btn btn-apply" onclick="applyPWMSettings()">💾 Apply PWM Settings</button>
         </div>
     </div>
 
@@ -1318,26 +1449,37 @@ h1 {
         // PWM Settings handlers
         document.getElementById('freqInput').addEventListener('change', function() {
             document.getElementById('freqValue').textContent = this.value + ' Hz';
+            applyPWMSettings();
         });
 
         document.getElementById('resSlider').addEventListener('input', function() {
             document.getElementById('resValue').textContent = this.value + ' bits';
         });
 
+        document.getElementById('resSlider').addEventListener('change', function() {
+            applyPWMSettings();
+        });
+
         document.getElementById('gammaSlider').addEventListener('input', function() {
             document.getElementById('gammaValue').textContent = (this.value / 10).toFixed(1);
         });
 
-        // Apply PWM settings to the server
+        document.getElementById('gammaSlider').addEventListener('change', function() {
+            applyGammaSettings();
+        });
+
+        document.getElementById('gammaEnable').addEventListener('change', function() {
+            applyGammaEnable(this.checked);
+        });
+
+        // Apply PWM frequency and resolution settings
         function applyPWMSettings() {
             const freq = document.getElementById('freqInput').value;
             const res = document.getElementById('resSlider').value;
-            const gamma = document.getElementById('gammaSlider').value / 10;
-            const gammaEnable = document.getElementById('gammaEnable').checked;
 
             // Validate frequency
-            if (freq < 1000 || freq > 20000) {
-                alert('Frequency must be between 1000 and 20000 Hz');
+            if (freq < 1 || freq > 20000) {
+                alert('Frequency must be between 1 and 20000 Hz');
                 return;
             }
 
@@ -1348,35 +1490,49 @@ h1 {
                     if (data.success) {
                         currentFreq = parseInt(freq);
                         currentRes = parseInt(res);
-                        // Update gamma settings
-                        fetch('/led/gamma?value=' + gamma)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    currentGamma = gamma;
-                                    // Update gamma enable
-                                    fetch('/led/gamma?enable=' + (gammaEnable ? 'true' : 'false'))
-                                        .then(response => response.json())
-                                        .then(data => {
-                                            if (data.success) {
-                                                currentGammaEnabled = gammaEnable;
-                                                alert('PWM settings applied successfully!');
-                                            }
-                                        })
-                                        .catch(error => {
-                                            console.error('Error updating gamma enable:', error);
-                                        });
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error updating gamma:', error);
-                            });
+                        console.log('PWM settings applied: freq=' + freq + 'Hz, res=' + res + ' bits');
                     } else {
-                        alert('Error: ' + (data.error || 'Unknown error'));
+                        console.error('Error: ' + (data.error || 'Unknown error'));
                     }
                 })
                 .catch(error => {
-                    alert('Error applying PWM settings: ' + error);
+                    console.error('Error applying PWM settings: ' + error);
+                });
+        }
+
+        // Apply gamma value
+        function applyGammaSettings() {
+            const gamma = document.getElementById('gammaSlider').value / 10;
+
+            fetch('/led/gamma?value=' + gamma)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentGamma = gamma;
+                        console.log('Gamma value applied: ' + gamma);
+                    } else {
+                        console.error('Error: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error applying gamma: ' + error);
+                });
+        }
+
+        // Toggle gamma enable
+        function applyGammaEnable(enable) {
+            fetch('/led/gamma?enable=' + (enable ? 'true' : 'false'))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentGammaEnabled = enable;
+                        console.log('Gamma ' + (enable ? 'enabled' : 'disabled'));
+                    } else {
+                        console.error('Error: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error toggling gamma: ' + error);
                 });
         }
 

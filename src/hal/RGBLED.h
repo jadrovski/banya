@@ -236,6 +236,7 @@ public:
      */
     virtual void setGamma(float gamma) {
         config.gamma = constrain(gamma, 0.1f, 5.0f);
+        updateHardware();
     }
 
     /**

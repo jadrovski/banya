@@ -370,6 +370,7 @@ void setup() {
     webServer.setLEDStrip(&ledStrip);
     webServer.setWiFiManager(&wifi);
     webServer.setWiFiSettings(&wifiSettings);
+    webServer.setLCD(&lcd);
     webServer.start();
 
     if (wifiConnected) {

@@ -130,6 +130,28 @@ namespace HAL {
         }
 
         /**
+         * @brief Перезагрузка дисплея (destroy + init)
+         * @return true если успешно
+         */
+        bool reboot() {
+            Serial.println("LCD: Reboot requested...");
+            
+            // Destroy existing object
+            if (lcd) {
+                Serial.println("LCD: Destroying existing instance...");
+                delete lcd;
+                lcd = nullptr;
+                initialized = false;
+            }
+            
+            delay(100); // Small delay to ensure cleanup
+            
+            // Re-initialize
+            Serial.println("LCD: Re-initializing...");
+            return begin();
+        }
+
+        /**
          * @brief Проверка подключения дисплея
          */
         bool isConnected() override {
