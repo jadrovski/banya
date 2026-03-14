@@ -38,12 +38,7 @@
 #include "hal/DS18B20.h"
 #include "hal/RGBLED.h"
 #include "hal/WiFi.h"
-#include "hal/WebServer.h"
+#include "hal/WiFiSettings.h"
 #include "hal/Touch.h"
-#include "hal/DisplayPages.h"
-#include "hal/OTA.h"
-#include "hal/OTAPresenter.h"
-#include "hal/LCDOTAPresenter.h"
-#include "../IntervalTimer.h"
 
 #endif // BANYA_HAL_H

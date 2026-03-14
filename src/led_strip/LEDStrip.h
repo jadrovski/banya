@@ -2,7 +2,7 @@
 #define BANYA_LEDSTRIP_H
 
 #include <Arduino.h>
-#include "color/BanyaColors.h"
+#include "../color/BanyaColors.h"
 
 class TemperatureColor;
 

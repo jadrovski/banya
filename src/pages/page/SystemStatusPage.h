@@ -2,10 +2,7 @@
 #define BANYA_HAL_PAGES_STATUS_H
 
 #include "../DisplayPage.h"
-#include "../WiFi.h"
-#include "../../color/BanyaColors.h"
-
-namespace HAL {
+#include "../../hal/WiFi.h"
 
 // ============================================================================
 // Страница 4: Общий статус системы
@@ -16,12 +13,12 @@ namespace HAL {
  */
 class SystemStatusPage : public DisplayPage {
 private:
-    WiFiManager* wifi;
+    HAL::WiFiManager* wifi;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
 public:
-    SystemStatusPage(WiFiManager* mgr, const String& title = "System Status")
+    SystemStatusPage(HAL::WiFiManager* mgr, const String& title = "System Status")
         : DisplayPage(title, 3),
           wifi(mgr),
           lastUpdate(0),
@@ -32,7 +29,7 @@ public:
         lastUpdate = 0;
     }
 
-    void render(LCD& lcd, bool force = false) override {
+    void render(HAL::LCD& lcd, bool force = false) override {
         unsigned long now = millis();
         bool needUpdate = force || (now - lastUpdate >= updateInterval);
 
@@ -70,7 +67,5 @@ public:
         lcd.print("KB ");
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_PAGES_STATUS_H

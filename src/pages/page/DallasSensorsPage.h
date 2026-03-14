@@ -2,9 +2,7 @@
 #define BANYA_HAL_PAGES_DALLAS_SENSORS_H
 
 #include "../DisplayPage.h"
-#include "../DS18B20.h"
-
-namespace HAL {
+#include "../../hal/DS18B20.h"
 
 /**
  * @brief Страница отображения температур DS18B20
@@ -14,7 +12,7 @@ namespace HAL {
  */
 class DallasSensorsPage : public DisplayPage {
 private:
-    DS18B20Manager* dsManager;
+    HAL::DS18B20Manager* dsManager;
     float lastTemp1;
     float lastTemp2;
     float lastTemp3;
@@ -22,7 +20,7 @@ private:
     const unsigned long updateInterval;
 
 public:
-    DallasSensorsPage(DS18B20Manager* ds, const String& title = "Dallas Sensors", unsigned long interval = 1000)
+    DallasSensorsPage(HAL::DS18B20Manager* ds, const String& title = "Dallas Sensors", unsigned long interval = 1000)
         : DisplayPage(title, 0),
           dsManager(ds),
           lastTemp1(-127),
@@ -39,14 +37,14 @@ public:
         lastTemp3 = -127;
     }
 
-    void render(LCD& lcd, bool force = false) override {
+    void render(HAL::LCD& lcd, bool force = false) override {
         if (!dsManager) return;
 
         updateDisplay(lcd, force);
     }
 
 private:
-    void updateDisplay(LCD& lcd, bool force) {
+    void updateDisplay(HAL::LCD& lcd, bool force) {
         unsigned long now = millis();
         bool needUpdate = force || (now - lastUpdate >= updateInterval);
 
@@ -86,7 +84,5 @@ private:
         }
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_PAGES_DALLAS_SENSORS_H

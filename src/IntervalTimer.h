@@ -4,8 +4,6 @@
 #include <Arduino.h>
 #include <functional>
 
-namespace HAL {
-
 /**
  * @brief Non-blocking interval timer for periodic tasks
  *
@@ -125,7 +123,5 @@ public:
         return interval - elapsed;
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_INTERVAL_TIMER_H

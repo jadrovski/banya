@@ -2,9 +2,7 @@
 #define BANYA_HAL_PAGES_LEDSTRIP_H
 
 #include "../DisplayPage.h"
-#include "../RGBLED.h"
-
-namespace HAL {
+#include "../../hal/RGBLED.h"
 
 /**
  * @brief Страница статуса LED strip
@@ -18,7 +16,7 @@ namespace HAL {
  */
 class LEDStripPage : public DisplayPage {
 private:
-    RGBLED* ledStrip;
+    HAL::RGBLED* ledStrip;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
@@ -28,7 +26,7 @@ public:
      * @param strip Указатель на объект RGBLED
      * @param title Заголовок страницы
      */
-    LEDStripPage(RGBLED* strip, 
+    LEDStripPage(HAL::RGBLED* strip,
                  const String& title = "LED Strip Status")
         : DisplayPage(title, 0),
           ledStrip(strip),
@@ -48,7 +46,7 @@ public:
      * @param lcd Ссылка на LCD дисплей
      * @param force Принудительная перерисовка
      */
-    void render(LCD& lcd, bool force = false) override {
+    void render(HAL::LCD& lcd, bool force = false) override {
         unsigned long now = millis();
         bool needUpdate = force || (now - lastUpdate >= updateInterval);
 
@@ -92,7 +90,5 @@ public:
         lcd.print(ledStrip->getConfig().enableGamma ? "ON " : "OFF");
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_PAGES_LEDSTRIP_H

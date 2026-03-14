@@ -2,10 +2,8 @@
 #define BANYA_HAL_PAGES_WIFI_SETUP_H
 
 #include "../DisplayPage.h"
-#include "../WiFi.h"
-#include "../WiFiSettings.h"
-
-namespace HAL {
+#include "../../hal/WiFi.h"
+#include "../../hal/WiFiSettings.h"
 
 /**
  * @brief Страница настройки WiFi (режим конфигурации)
@@ -18,8 +16,8 @@ namespace HAL {
  */
 class WiFiSetupPage : public DisplayPage {
 private:
-    WiFiManager* wifiManager;
-    WiFiSettings* wifiSettings;
+    HAL::WiFiManager* wifiManager;
+    HAL::WiFiSettings* wifiSettings;
     String lastAPIP;
     String lastAPSSID;
     unsigned long lastUpdate;
@@ -27,7 +25,7 @@ private:
     bool apEnabled;
 
 public:
-    WiFiSetupPage(WiFiManager* mgr, WiFiSettings* settings, const String& title = "WiFi Setup")
+    WiFiSetupPage(HAL::WiFiManager* mgr, HAL::WiFiSettings* settings, const String& title = "WiFi Setup")
         : DisplayPage(title, 3),
           wifiManager(mgr),
           wifiSettings(settings),
@@ -41,7 +39,7 @@ public:
         apEnabled = false;
     }
 
-    void render(LCD& lcd, bool force = false) override {
+    void render(HAL::LCD& lcd, bool force = false) override {
         if (!wifiManager) return;
 
         unsigned long now = millis();
@@ -52,7 +50,7 @@ public:
 
         // Проверяем, включён ли AP режим
         bool currentAPEnabled = wifiManager->isAPEnabled();
-        const APConfig& apCfg = wifiManager->getAPConfig();
+        const HAL::APConfig& apCfg = wifiManager->getAPConfig();
         const String apiP = wifiManager->getAPIPAddressString();
 
         // Строка 0: Заголовок со статусом AP (ON/OFF)
@@ -101,7 +99,5 @@ public:
         return wifiManager->getAPStationCount();
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_PAGES_WIFI_SETUP_H

@@ -2,9 +2,7 @@
 #define BANYA_HAL_DISPLAY_PAGE_H
 
 #include <Arduino.h>
-#include "LCD.h"
-
-namespace HAL {
+#include "../hal/LCD.h"
 
 /**
  * @brief Базовый класс для страницы дисплея
@@ -34,7 +32,7 @@ public:
      * @param lcd Ссылка на LCD дисплей
      * @param forceForce Принудительная перерисовка
      */
-    virtual void render(LCD& lcd, bool force = false) = 0;
+    virtual void render(HAL::LCD& lcd, bool force = false) = 0;
 
     /**
      * @brief Инициализация страницы (вызывается при переключении)
@@ -70,7 +68,5 @@ public:
      */
     bool isVisible() const { return visible; }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_DISPLAY_PAGE_H

@@ -1,8 +1,8 @@
 #include "Arduino.h"
 #include "LEDStrip.h"
-#include "color/HSV.h"
-#include "color/HSL.h"
-#include "color/TemperatureColor.h"
+#include "../color/HSV.h"
+#include "../color/HSL.h"
+#include "../color/TemperatureColor.h"
 
 // Gamma correction table (2.2 gamma)
 const uint16_t LEDStrip::GAMMA_TABLE[256] = {

@@ -12,6 +12,6 @@
  */
 
 #include "DisplayPage.h"
-#include "PageManager.h"
+#include "../hal/PageManager.h"
 
 #endif // BANYA_HAL_DISPLAY_PAGES_H

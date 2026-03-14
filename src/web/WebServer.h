@@ -3,41 +3,40 @@
 
 #include <Arduino.h>
 #include <WebServer.h>
-#include "WiFi.h"
-#include "WiFiSettings.h"
-#include "RGBLED.h"
-#include "LCD.h"
-
-namespace HAL {
+#include "../hal/WiFi.h"
+#include "../hal/RGBLED.h"
+#include "../hal/LCD.h"
 
 /**
  * @brief Конфигурация веб-сервера
  */
 struct WebServerConfig {
-    uint16_t port;        // Порт сервера (по умолчанию 80)
+    uint16_t port; // Порт сервера (по умолчанию 80)
 
-    WebServerConfig(uint16_t p = 80) : port(p) {}
+    WebServerConfig(uint16_t p = 80) : port(p) {
+    }
 };
 
 /**
  * @brief Данные статуса для веб-интерфейса
  */
 struct BanyaStatus {
-    float temp1;          // Температура DS18B20 #1
-    float temp2;          // Температура DS18B20 #2
-    float temp3;          // Температура BME280
-    float humidity;       // Влажность BME280
-    float pressure;       // Давление BME280 (мм рт.ст.)
+    float temp1; // Температура DS18B20 #1
+    float temp2; // Температура DS18B20 #2
+    float temp3; // Температура BME280
+    float humidity; // Влажность BME280
+    float pressure; // Давление BME280 (мм рт.ст.)
     bool sensor1Connected;
     bool sensor2Connected;
     String wifiIP;
     String wifiStatus;
-    String otaStatus;     // OTA статус
-    uint8_t otaProgress;  // OTA прогресс (0-100)
+    String otaStatus; // OTA статус
+    uint8_t otaProgress; // OTA прогресс (0-100)
 
     BanyaStatus() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
-                   sensor1Connected(false), sensor2Connected(false),
-                   otaProgress(0) {}
+                    sensor1Connected(false), sensor2Connected(false),
+                    otaProgress(0) {
+    }
 };
 
 /**
@@ -54,11 +53,11 @@ private:
     WebServerConfig config;
     std::unique_ptr<WebServer> server;
     std::function<BanyaStatus()> statusProvider;
-    RGBLED* ledStrip;
-    WiFiManager* wifiManager;
-    WiFiSettings* wifiSettings;
-    LCD* lcd;
-    void* otaManager;  // OTA manager pointer (void* to avoid circular dependency)
+    HAL::RGBLED *ledStrip;
+    HAL::WiFiManager *wifiManager;
+    HAL::WiFiSettings *wifiSettings;
+    HAL::LCD *lcd;
+    void *otaManager; // OTA manager pointer (void* to avoid circular dependency)
     bool running;
 
 public:
@@ -67,11 +66,12 @@ public:
      * @param cfg Конфигурация
      * @param led Указатель на RGBLED
      */
-    explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig(), RGBLED* led = nullptr)
+    explicit BanyaWebServer(const WebServerConfig &cfg = WebServerConfig(), HAL::RGBLED *led = nullptr)
         : config(cfg), server(nullptr), statusProvider(nullptr), ledStrip(led),
           wifiManager(nullptr), wifiSettings(nullptr), lcd(nullptr),
           otaManager(nullptr),
-          running(false) {}
+          running(false) {
+    }
 
     ~BanyaWebServer() {
         stop();
@@ -155,7 +155,7 @@ public:
      * @brief Установить указатель на RGBLED
      * @param led Указатель на RGBLED
      */
-    void setLEDStrip(RGBLED* led) {
+    void setLEDStrip(HAL::RGBLED *led) {
         ledStrip = led;
     }
 
@@ -163,7 +163,7 @@ public:
      * @brief Установить менеджер WiFi для конфигурации
      * @param manager Указатель на WiFiManager
      */
-    void setWiFiManager(WiFiManager* manager) {
+    void setWiFiManager(HAL::WiFiManager *manager) {
         wifiManager = manager;
     }
 
@@ -171,7 +171,7 @@ public:
      * @brief Установить хранилище настроек WiFi
      * @param settings Указатель на WiFiSettings
      */
-    void setWiFiSettings(WiFiSettings* settings) {
+    void setWiFiSettings(HAL::WiFiSettings *settings) {
         wifiSettings = settings;
     }
 
@@ -179,7 +179,7 @@ public:
      * @brief Установить указатель на LCD
      * @param lcd Указатель на LCD
      */
-    void setLCD(LCD* display) {
+    void setLCD(HAL::LCD *display) {
         lcd = display;
     }
 
@@ -187,7 +187,7 @@ public:
      * @brief Установить указатель на OTA менеджер
      * @param ota Указатель на OTAManager
      */
-    void setOTA(void* ota) {
+    void setOTA(void *ota) {
         otaManager = ota;
     }
 
@@ -323,17 +323,17 @@ private:
         }
 
         bool updated = false;
-        
+
         // Save current color state before changes
         RGB savedColor = ledStrip->getCurrentColor();
         float savedBrightness = ledStrip->getBrightness();
-        
+
         // Update frequency if provided
         if (server->hasArg("frequency")) {
             uint32_t freq = server->arg("frequency").toInt();
             // Valid range: 1Hz - 20000Hz (ESP32 LEDC typical range)
             if (freq >= 1 && freq <= 20000) {
-                const_cast<RGBLEDConfig&>(ledStrip->getConfig()).pwmFrequency = freq;
+                const_cast<HAL::RGBLEDConfig &>(ledStrip->getConfig()).pwmFrequency = freq;
                 Serial.println("LED PWM: Frequency changed to " + String(freq) + "Hz");
                 updated = true;
             } else {
@@ -347,7 +347,7 @@ private:
             uint8_t res = server->arg("resolution").toInt();
             // Valid range: 1-16 bits
             if (res >= 1 && res <= 16) {
-                const_cast<RGBLEDConfig&>(ledStrip->getConfig()).pwmResolution = res;
+                const_cast<HAL::RGBLEDConfig &>(ledStrip->getConfig()).pwmResolution = res;
                 Serial.println("LED PWM: Resolution changed to " + String(res) + " bits");
                 updated = true;
             } else {
@@ -402,7 +402,8 @@ private:
             bool enable = server->arg("enable") == "true";
             ledStrip->enableGamma(enable);
             Serial.println("LED Gamma: " + String(enable ? "enabled" : "disabled"));
-            server->send(200, "application/json", "{\"success\":true,\"enabled\":" + String(enable ? "true" : "false") + "}");
+            server->send(200, "application/json",
+                         "{\"success\":true,\"enabled\":" + String(enable ? "true" : "false") + "}");
             return;
         }
 
@@ -519,10 +520,12 @@ private:
 
         if (success) {
             Serial.println("System: LCD reboot completed successfully");
-            server->send(200, "application/json", "{\"success\":true,\"message\":\"LCD display rebooted successfully\"}");
+            server->send(200, "application/json",
+                         "{\"success\":true,\"message\":\"LCD display rebooted successfully\"}");
         } else {
             Serial.println("System: LCD reboot failed - display not found");
-            server->send(500, "application/json", "{\"success\":false,\"error\":\"LCD display not found after reboot\"}");
+            server->send(500, "application/json",
+                         "{\"success\":false,\"error\":\"LCD display not found after reboot\"}");
         }
     }
 
@@ -536,7 +539,7 @@ private:
         }
 
         Serial.println("WiFi: Enabling AP mode...");
-        
+
         if (wifiManager->enableAP()) {
             String json = "{\"success\":true,\"ip\":\"" + wifiManager->getAPIPAddressString() + "\"}";
             server->send(200, "application/json", json);
@@ -1982,7 +1985,5 @@ h1 {
         return html;
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_WEBSERVER_H

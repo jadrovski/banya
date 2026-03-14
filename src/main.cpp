@@ -1,13 +1,17 @@
 #include <Arduino.h>
+
+#include "IntervalTimer.h"
 #include "hal/HAL.h"
-#include "hal/OTA.h"
-#include "hal/OTAPresenter.h"
-#include "hal/LCDOTAPresenter.h"
-#include "hal/pages/Sensors.h"
-#include "hal/pages/SystemStatusPage.h"
-#include "hal/pages/LEDStripPage.h"
-#include "hal/pages/WiFiSetupPage.h"
+#include "ota/OTA.h"
+#include "ota/OTAPresenter.h"
+#include "adapter/LCDOTAPresenter.h"
+#include "pages/page/Sensors.h"
+#include "pages/page/SystemStatusPage.h"
+#include "pages/page/LEDStripPage.h"
+#include "pages/page/WiFiSetupPage.h"
 #include "color/BanyaColors.h"
+#include "pages/PageManager.h"
+#include "web/WebServer.h"
 
 // ============================================================================
 // Конфигурация оборудования
@@ -76,7 +80,7 @@ HAL::RGBLED ledStrip(ledConfig);
 HAL::WiFiSettings wifiSettings;
 HAL::WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
 HAL::WiFiManager wifi(wifiConfig);
-HAL::BanyaWebServer webServer;
+BanyaWebServer webServer;
 
 // OTA конфигурация
 HAL::OTAConfig otaConfig;
@@ -94,15 +98,15 @@ HAL::TouchConfig touchConfig(
 HAL::TouchSensor touch(touchConfig);
 
 // Менеджер страниц
-HAL::PageManager pageMgr;
+PageManager pageMgr;
 
 // Страницы (будут созданы в setup)
-HAL::DallasSensorsPage *dallasPage = nullptr;
-HAL::BME280Page *bmePage = nullptr;
-HAL::DisplayPage *wifiPage = nullptr;
-HAL::SystemStatusPage *statusPage = nullptr;
-HAL::LEDStripPage *ledStripPage = nullptr;
-HAL::WiFiSetupPage *wifiSetupPage = nullptr;
+DallasSensorsPage *dallasPage = nullptr;
+BME280Page *bmePage = nullptr;
+DisplayPage *wifiPage = nullptr;
+SystemStatusPage *statusPage = nullptr;
+LEDStripPage *ledStripPage = nullptr;
+WiFiSetupPage *wifiSetupPage = nullptr;
 
 // ============================================================================
 // Функции LCD
@@ -124,8 +128,8 @@ void displayWelcome() {
 // Провайдер статуса для веб-сервера
 // ============================================================================
 
-HAL::BanyaStatus getBanyaStatus() {
-    HAL::BanyaStatus status;
+BanyaStatus getBanyaStatus() {
+    BanyaStatus status;
 
     // Температуры (DS18B20 обновляется автоматически в loop())
     status.temp1 = ds18b20.getTemperature(0);
@@ -437,20 +441,20 @@ void setup() {
     // Создание страниц
     Serial.println("Creating display pages...");
 
-    dallasPage = new HAL::DallasSensorsPage(&ds18b20, "Dallas DS18B20");
-    bmePage = new HAL::BME280Page(&bme, "BME280 Sensor");
-    wifiPage = new HAL::WiFiInfoPage(&wifi, "WiFi Info");
-    wifiSetupPage = new HAL::WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup");
-    statusPage = new HAL::SystemStatusPage(&wifi, "System Status");
-    ledStripPage = new HAL::LEDStripPage(&ledStrip, "LED Strip");
+    dallasPage = new DallasSensorsPage(&ds18b20, "Dallas DS18B20");
+    bmePage = new BME280Page(&bme, "BME280 Sensor");
+    wifiPage = new WiFiInfoPage(&wifi, "WiFi Info");
+    wifiSetupPage = new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup");
+    statusPage = new SystemStatusPage(&wifi, "System Status");
+    ledStripPage = new LEDStripPage(&ledStrip, "LED Strip");
 
     // Добавление страниц в менеджер
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(dallasPage));
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(bmePage));
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(ledStripPage));
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiPage));
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(wifiSetupPage));
-    pageMgr.addPage(std::unique_ptr<HAL::DisplayPage>(statusPage));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(dallasPage));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(bmePage));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(ledStripPage));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(wifiPage));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(wifiSetupPage));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(statusPage));
 
     pageMgr.begin(&lcd);
 
@@ -478,7 +482,7 @@ void setup() {
 // Loop
 // ============================================================================
 
-HAL::IntervalTimer lcdTimer(5000); // 5 секунд
+IntervalTimer lcdTimer(5000); // 5 секунд
 
 void loop() {
     handleSerialCommands();

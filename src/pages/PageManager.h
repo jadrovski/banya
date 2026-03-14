@@ -6,8 +6,6 @@
 #include <memory>
 #include "DisplayPage.h"
 
-namespace HAL {
-
 /**
  * @brief Менеджер страниц дисплея
  *
@@ -17,7 +15,7 @@ class PageManager {
 private:
     std::vector<std::unique_ptr<DisplayPage>> pages;
     uint8_t currentPageIndex;
-    LCD* lcd;
+    HAL::LCD* lcd;
     bool autoPageSwitch;
     unsigned long lastPageSwitchTime;
     uint32_t pageSwitchInterval;
@@ -27,7 +25,7 @@ public:
      * @brief Конструктор PageManager
      * @param display Ссылка на LCD дисплей
      */
-    explicit PageManager(LCD* display = nullptr)
+    explicit PageManager(HAL::LCD* display = nullptr)
         : currentPageIndex(0),
           lcd(display),
           autoPageSwitch(false),
@@ -38,7 +36,7 @@ public:
      * @brief Инициализация менеджера
      * @param display Ссылка на LCD дисплей
      */
-    void begin(LCD* display) {
+    void begin(HAL::LCD* display) {
         lcd = display;
     }
 
@@ -230,7 +228,5 @@ inline void drawPageIndicator(LCD& lcd, uint8_t current, uint8_t total) {
     // Подсказка
     lcd.print(" >Next");
 }
-
-} // namespace HAL
 
 #endif // BANYA_HAL_PAGE_MANAGER_H

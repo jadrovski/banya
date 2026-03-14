@@ -1,8 +1,8 @@
 #ifndef BANYA_LCD_OTA_PRESENTER_H
 #define BANYA_LCD_OTA_PRESENTER_H
 
-#include "OTAPresenter.h"
-#include "LCD.h"
+#include "../ota/OTAPresenter.h"
+#include "../hal/LCD.h"
 
 namespace HAL {
 

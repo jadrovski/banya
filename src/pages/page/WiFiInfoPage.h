@@ -2,23 +2,21 @@
 #define BANYA_HAL_PAGES_WIFI_INFO_H
 
 #include "../DisplayPage.h"
-#include "../WiFi.h"
-
-namespace HAL {
+#include "../../hal/WiFi.h"
 
 /**
  * @brief Страница отображения WiFi информации с MAC адресом
  */
 class WiFiInfoPage : public DisplayPage {
 private:
-    WiFiManager* wifi;
+    HAL::WiFiManager* wifi;
     String lastIP;
     String lastStatus;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
 public:
-    WiFiInfoPage(WiFiManager* mgr, const String& title = "WiFi Info")
+    WiFiInfoPage(HAL::WiFiManager* mgr, const String& title = "WiFi Info")
         : DisplayPage(title, 3),
           wifi(mgr),
           lastUpdate(0),
@@ -29,7 +27,7 @@ public:
         lastUpdate = 0;
     }
 
-    void render(LCD& lcd, bool force = false) override {
+    void render(HAL::LCD& lcd, bool force = false) override {
         if (!wifi) return;
 
         unsigned long now = millis();
@@ -70,7 +68,5 @@ public:
         lastStatus = wifi->getStatusString();
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_PAGES_WIFI_INFO_H
