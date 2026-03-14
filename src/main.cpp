@@ -383,6 +383,9 @@ void setup() {
             Serial.println(otaConfig.hostname);
             Serial.print("OTA: Port: ");
             Serial.println(otaConfig.port);
+            
+            // Set LCD for OTA status display
+            ota.setLCD(&lcd);
         } else {
             Serial.println("FAILED");
         }

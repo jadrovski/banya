@@ -7,6 +7,9 @@
 
 namespace HAL {
 
+// Forward declaration to avoid circular dependency and multiple definition errors
+class LCD;
+
 /**
  * @brief OTA update status enumeration
  */
@@ -112,11 +115,18 @@ public:
      */
     void onError(std::function<void(ota_error_t)> callback);
 
+    /**
+     * @brief Set LCD display for showing OTA status
+     * @param display Pointer to LCD instance
+     */
+    void setLCD(LCD* display);
+
 private:
     OTAConfig config;
     OTAStatus status = OTAStatus::IDLE;
     uint8_t progress = 0;
     bool initialized = false;
+    LCD* lcd = nullptr;  // LCD display for OTA status
 
     // Callbacks
     std::function<void()> onStartCallback = nullptr;
