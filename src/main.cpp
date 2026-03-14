@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "hal/HAL.h"
+#include "hal/OTA.h"
 #include "hal/pages/Sensors.h"
 #include "hal/pages/SystemStatusPage.h"
 #include "hal/pages/LEDStripPage.h"
@@ -75,6 +76,10 @@ HAL::WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут за�
 HAL::WiFiManager wifi(wifiConfig);
 HAL::BanyaWebServer webServer;
 
+// OTA конфигурация
+HAL::OTAConfig otaConfig;
+HAL::OTAManager ota(otaConfig);
+
 // Touch сенсор
 HAL::TouchConfig touchConfig(
     TOUCH_PIN,
@@ -133,6 +138,10 @@ HAL::BanyaStatus getBanyaStatus() {
     // WiFi
     status.wifiIP = wifi.getIPAddressString();
     status.wifiStatus = wifi.getStatusString();
+
+    // OTA
+    status.otaStatus = ota.getStatusString();
+    status.otaProgress = ota.getProgress();
 
     return status;
 }
@@ -359,6 +368,26 @@ void setup() {
 
     bool wifiConnected = wifi.connect();
 
+    // Инициализация OTA (только если WiFi подключён)
+    if (wifiConnected) {
+        // Configure OTA
+        otaConfig.hostname = "banya-controller";
+        otaConfig.port = 3232;
+        otaConfig.enableProgress = true;
+        otaConfig.enableDebug = false;
+
+        Serial.print("Initializing OTA... ");
+        if (ota.begin()) {
+            Serial.println("OK");
+            Serial.print("OTA: Hostname: ");
+            Serial.println(otaConfig.hostname);
+            Serial.print("OTA: Port: ");
+            Serial.println(otaConfig.port);
+        } else {
+            Serial.println("FAILED");
+        }
+    }
+
     // Запуск веб-сервера (всегда, даже если WiFi не подключён)
     webServer.begin();
     webServer.setStatusProvider(getBanyaStatus);
@@ -366,6 +395,7 @@ void setup() {
     webServer.setWiFiManager(&wifi);
     webServer.setWiFiSettings(&wifiSettings);
     webServer.setLCD(&lcd);
+    webServer.setOTA(&ota);
     webServer.start();
 
     if (wifiConnected) {
@@ -454,6 +484,9 @@ void loop() {
 
     // Обработка процесса WiFi переподключения (неблокирующее)
     wifi.handleLoop();
+
+    // Обработка OTA обновлений
+    ota.handleLoop();
 
     // Обработка Touch событий (tap, long press, very-long press)
     touch.handleLoop();

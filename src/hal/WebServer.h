@@ -32,9 +32,12 @@ struct BanyaStatus {
     bool sensor2Connected;
     String wifiIP;
     String wifiStatus;
+    String otaStatus;     // OTA статус
+    uint8_t otaProgress;  // OTA прогресс (0-100)
 
     BanyaStatus() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
-                   sensor1Connected(false), sensor2Connected(false) {}
+                   sensor1Connected(false), sensor2Connected(false),
+                   otaProgress(0) {}
 };
 
 /**
@@ -55,6 +58,7 @@ private:
     WiFiManager* wifiManager;
     WiFiSettings* wifiSettings;
     LCD* lcd;
+    void* otaManager;  // OTA manager pointer (void* to avoid circular dependency)
     bool running;
 
 public:
@@ -66,6 +70,7 @@ public:
     explicit BanyaWebServer(const WebServerConfig& cfg = WebServerConfig(), RGBLED* led = nullptr)
         : config(cfg), server(nullptr), statusProvider(nullptr), ledStrip(led),
           wifiManager(nullptr), wifiSettings(nullptr), lcd(nullptr),
+          otaManager(nullptr),
           running(false) {}
 
     ~BanyaWebServer() {
@@ -179,6 +184,14 @@ public:
     }
 
     /**
+     * @brief Установить указатель на OTA менеджер
+     * @param ota Указатель на OTAManager
+     */
+    void setOTA(void* ota) {
+        otaManager = ota;
+    }
+
+    /**
      * @brief Проверка работает ли сервер
      */
     bool isRunning() const { return running; }
@@ -207,7 +220,10 @@ private:
             json += "\"pressure\":" + String(status.pressure, 1) + ",";
             json += "\"sensor1\":" + String(status.sensor1Connected ? "true" : "false") + ",";
             json += "\"sensor2\":" + String(status.sensor2Connected ? "true" : "false") + ",";
-            json += "\"wifi\":\"" + status.wifiIP + "\"";
+            json += "\"wifi\":\"" + status.wifiIP + "\",";
+            json += "\"wifiStatus\":\"" + status.wifiStatus + "\",";
+            json += "\"ota\":\"" + status.otaStatus + "\",";
+            json += "\"otaProgress\":" + String(status.otaProgress);
             json += "}";
 
             server->send(200, "application/json", json);
