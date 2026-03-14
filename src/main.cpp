@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "hal/HAL.h"
 #include "hal/OTA.h"
+#include "hal/OTAPresenter.h"
+#include "hal/LCDOTAPresenter.h"
 #include "hal/pages/Sensors.h"
 #include "hal/pages/SystemStatusPage.h"
 #include "hal/pages/LEDStripPage.h"
@@ -79,6 +81,7 @@ HAL::BanyaWebServer webServer;
 // OTA конфигурация
 HAL::OTAConfig otaConfig;
 HAL::OTAManager ota(otaConfig);
+HAL::LCDOTAPresenter otaPresenter(&lcd);
 
 // Touch сенсор
 HAL::TouchConfig touchConfig(
@@ -383,9 +386,10 @@ void setup() {
             Serial.println(otaConfig.hostname);
             Serial.print("OTA: Port: ");
             Serial.println(otaConfig.port);
-            
-            // Set LCD for OTA status display
-            ota.setLCD(&lcd);
+
+            // Initialize and set OTA presenter
+            otaPresenter.begin();
+            ota.setPresenter(&otaPresenter);
         } else {
             Serial.println("FAILED");
         }

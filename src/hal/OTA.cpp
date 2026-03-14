@@ -1,5 +1,5 @@
 #include "OTA.h"
-#include "LCD.h"
+#include "OTAPresenter.h"
 
 namespace HAL {
     OTAManager::OTAManager(const OTAConfig &config) : config(config) {
@@ -114,96 +114,76 @@ namespace HAL {
         onErrorCallback = callback;
     }
 
-    void OTAManager::setLCD(LCD *display) {
-        lcd = display;
+    void OTAManager::setPresenter(OTAPresenter *presenter) {
+        this->presenter = presenter;
     }
 
     void OTAManager::setupCallbacks() {
         // Capture this for access to config in lambdas
         auto configPtr = &config;
-        auto lcdPtr = &lcd;
+        auto presenterPtr = &presenter;
 
         // Start callback
-        ArduinoOTA.onStart([lcdPtr]() {
+        ArduinoOTA.onStart([presenterPtr]() {
             Serial.println("OTA: Update started");
-            if (*lcdPtr && *lcdPtr) {
-                (*lcdPtr)->clear();
-                (*lcdPtr)->setCursor(0, 0);
-                (*lcdPtr)->print("Firmware Update");
-                (*lcdPtr)->setCursor(0, 2);
-                (*lcdPtr)->print("Starting...");
+            if (*presenterPtr && *presenterPtr) {
+                (*presenterPtr)->showStart();
             }
         });
 
         // End callback
-        ArduinoOTA.onEnd([lcdPtr]() {
+        ArduinoOTA.onEnd([presenterPtr]() {
             Serial.println("OTA: Update completed");
-            if (*lcdPtr && *lcdPtr) {
-                (*lcdPtr)->clear();
-                (*lcdPtr)->setCursor(0, 0);
-                (*lcdPtr)->print("Firmware Update");
-                (*lcdPtr)->setCursor(0, 1);
-                (*lcdPtr)->print("Update Complete!");
-                (*lcdPtr)->setCursor(0, 2);
-                (*lcdPtr)->print("Rebooting...");
+            if (*presenterPtr && *presenterPtr) {
+                (*presenterPtr)->showEnd();
             }
         });
 
         // Progress callback
-        ArduinoOTA.onProgress([configPtr, lcdPtr](unsigned int progress, unsigned int total) {
+        ArduinoOTA.onProgress([configPtr, presenterPtr](unsigned int progress, unsigned int total) {
             uint8_t percent = (progress / (total / 100));
             if (configPtr->enableProgress) {
                 Serial.printf("OTA: Progress: %u%%\r", percent);
             }
-            if (*lcdPtr && *lcdPtr) {
-                (*lcdPtr)->setCursor(0, 1);
-                (*lcdPtr)->print("Progress: ");
-                (*lcdPtr)->print(percent);
-                (*lcdPtr)->print("%");
-
-                // Progress bar on row 3
-                (*lcdPtr)->setCursor(0, 3);
-                uint8_t barWidth = 20;
-                uint8_t filled = (percent * barWidth) / 100;
-                (*lcdPtr)->print("[");
-                for (uint8_t i = 0; i < barWidth - 2; i++) {
-                    if (i < filled) {
-                        (*lcdPtr)->write(byte(255)); // Full block
-                    } else {
-                        (*lcdPtr)->print("-");
-                    }
-                }
-                (*lcdPtr)->print("]");
+            if (*presenterPtr && *presenterPtr) {
+                OTAProgress otaProgress;
+                otaProgress.percent = percent;
+                otaProgress.current = progress;
+                otaProgress.total = total;
+                (*presenterPtr)->showProgress(otaProgress);
             }
         });
 
         // Error callback
-        ArduinoOTA.onError([lcdPtr](ota_error_t error) {
+        ArduinoOTA.onError([presenterPtr](ota_error_t error) {
             Serial.printf("OTA: Error [%u]: ", error);
+            OTAErrorType errorType = OTAErrorType::UNKNOWN;
             const char *errorMsg = "Unknown Error";
+
             if (error == OTA_AUTH_ERROR) {
                 Serial.println("Auth Failed");
                 errorMsg = "Auth Failed";
+                errorType = OTAErrorType::AUTH;
             } else if (error == OTA_BEGIN_ERROR) {
                 Serial.println("Begin Failed");
                 errorMsg = "Begin Failed";
+                errorType = OTAErrorType::BEGIN;
             } else if (error == OTA_CONNECT_ERROR) {
                 Serial.println("Connect Failed");
                 errorMsg = "Connect Failed";
+                errorType = OTAErrorType::CONNECT;
             } else if (error == OTA_RECEIVE_ERROR) {
                 Serial.println("Receive Failed");
                 errorMsg = "Receive Failed";
+                errorType = OTAErrorType::RECEIVE;
             } else if (error == OTA_END_ERROR) {
                 Serial.println("End Failed");
                 errorMsg = "End Failed";
+                errorType = OTAErrorType::END;
             }
 
-            if (*lcdPtr && *lcdPtr) {
-                (*lcdPtr)->clear();
-                (*lcdPtr)->setCursor(0, 0);
-                (*lcdPtr)->print("OTA Error!");
-                (*lcdPtr)->setCursor(0, 2);
-                (*lcdPtr)->print(errorMsg);
+            if (*presenterPtr && *presenterPtr) {
+                (*presenterPtr)->showError(errorType, String(errorMsg));
             }
         });
     }
