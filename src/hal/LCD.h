@@ -87,7 +87,7 @@ namespace HAL {
         }
 
         ~LCD() override {
-            if (lcd) delete lcd;
+            delete lcd;
         }
 
         /**
@@ -370,7 +370,7 @@ namespace HAL {
     // Определения пользовательских символов LCD (https://maxpromer.github.io/LCD-Character-Creator/)
     // ============================================================================
 
-    inline const byte LCD::smiley[8] = {
+    const byte LCD::smiley[8] = {
         B00000,
         B10001,
         B00000,
@@ -380,7 +380,7 @@ namespace HAL {
         B00000,
     };
 
-    inline const byte LCD::russianB[8] = {
+    const byte LCD::russianB[8] = {
         B11111,
         B10000,
         B10000,
@@ -391,7 +391,7 @@ namespace HAL {
         B00000
     };
 
-    inline const byte LCD::russianYA[8] = {
+    const byte LCD::russianYA[8] = {
         B01111,
         B10001,
         B10001,
@@ -402,7 +402,7 @@ namespace HAL {
         B00000
     };
 
-    inline const byte LCD::wifiIcon[8] = {
+    const byte LCD::wifiIcon[8] = {
         B00000,
         B00000,
         B01110,
@@ -413,7 +413,7 @@ namespace HAL {
         B00100
     };
 
-    inline const byte LCD::touchIcon[8] = {
+    const byte LCD::touchIcon[8] = {
         B00100,
         B01110,
         B11111,
@@ -424,7 +424,7 @@ namespace HAL {
         B00000,
     };
 
-    inline const byte LCD::arrowRight[8] = {
+    const byte LCD::arrowRight[8] = {
         B00000,
         B00010,
         B00110,
