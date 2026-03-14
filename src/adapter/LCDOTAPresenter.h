@@ -4,10 +4,8 @@
 #include "../ota/OTAPresenter.h"
 #include "../hal/LCD.h"
 
-namespace HAL {
-
 /**
- * @brief LCD implementation of OTAPresenter
+ * @brief LCD2004 implementation of OTAPresenter
  *
  * Displays OTA update status on the LCD screen.
  * This is the only class that knows about both OTA events and LCD.
@@ -18,7 +16,7 @@ public:
      * @brief Construct a new LCD OTA Presenter
      * @param display Pointer to LCD instance
      */
-    explicit LCDOTAPresenter(LCD* display) : lcd(display) {}
+    explicit LCDOTAPresenter(LCD2004* display) : lcd(display) {}
 
     /**
      * @brief Initialize presenter (create custom characters if needed)
@@ -101,9 +99,7 @@ public:
     }
 
 private:
-    LCD* lcd = nullptr;
+    LCD2004* lcd = nullptr;
 };
-
-} // namespace HAL
 
 #endif // BANYA_LCD_OTA_PRESENTER_H

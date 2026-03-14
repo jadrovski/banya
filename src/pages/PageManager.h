@@ -15,7 +15,7 @@ class PageManager {
 private:
     std::vector<std::unique_ptr<DisplayPage>> pages;
     uint8_t currentPageIndex;
-    HAL::LCD* lcd;
+    LCD2004* lcd;
     bool autoPageSwitch;
     unsigned long lastPageSwitchTime;
     uint32_t pageSwitchInterval;
@@ -25,7 +25,7 @@ public:
      * @brief Конструктор PageManager
      * @param display Ссылка на LCD дисплей
      */
-    explicit PageManager(HAL::LCD* display = nullptr)
+    explicit PageManager(LCD2004* display = nullptr)
         : currentPageIndex(0),
           lcd(display),
           autoPageSwitch(false),
@@ -36,7 +36,7 @@ public:
      * @brief Инициализация менеджера
      * @param display Ссылка на LCD дисплей
      */
-    void begin(HAL::LCD* display) {
+    void begin(LCD2004* display) {
         lcd = display;
     }
 
@@ -203,7 +203,7 @@ public:
  * @param current Текущий индекс
  * @param total Всего страниц
  */
-inline void drawPageIndicator(LCD& lcd, uint8_t current, uint8_t total) {
+inline void drawPageIndicator(LCD2004& lcd, uint8_t current, uint8_t total) {
     if (total <= 1) return;
 
     lcd.setCursor(0, 3);

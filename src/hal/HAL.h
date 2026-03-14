@@ -4,22 +4,22 @@
 /**
  * @file HAL.h
  * @brief Hardware Access Layer для проекта Banya Controller
- * 
+ *
  * Этот файл предоставляет удобный способ импорта всех HAL-компонентов
- * 
+ *
  * Пример использования:
  * @code
  * #include "hal/HAL.h"
- * 
- * HAL::LCD lcd;
- * HAL::BME280Sensor bme;
- * HAL::DS18B20Manager ds18b20;
- * HAL::RGBLED led;
- * HAL::WiFiManager wifi;
- * HAL::BanyaWebServer webServer;
- * HAL::TouchSensor touch;
- * HAL::PageManager pageMgr;
- * 
+ *
+ * LCD2004 lcd;
+ * BME280Sensor bme;
+ * DS18B20Manager ds18b20;
+ * RGBLED led;
+ * WiFiManager wifi;
+ * BanyaWebServer webServer;
+ * TouchSensor touch;
+ * PageManager pageMgr;
+ *
  * void setup() {
  *     lcd.begin();
  *     bme.begin();

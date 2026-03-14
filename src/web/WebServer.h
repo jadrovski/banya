@@ -53,10 +53,10 @@ private:
     WebServerConfig config;
     std::unique_ptr<WebServer> server;
     std::function<BanyaStatus()> statusProvider;
-    HAL::RGBLED *ledStrip;
-    HAL::WiFiManager *wifiManager;
-    HAL::WiFiSettings *wifiSettings;
-    HAL::LCD *lcd;
+    RGBLED *ledStrip;
+    WiFiManager *wifiManager;
+    WiFiSettings *wifiSettings;
+    LCD2004 *lcd;
     void *otaManager; // OTA manager pointer (void* to avoid circular dependency)
     bool running;
 
@@ -66,7 +66,7 @@ public:
      * @param cfg Конфигурация
      * @param led Указатель на RGBLED
      */
-    explicit BanyaWebServer(const WebServerConfig &cfg = WebServerConfig(), HAL::RGBLED *led = nullptr)
+    explicit BanyaWebServer(const WebServerConfig &cfg = WebServerConfig(), RGBLED *led = nullptr)
         : config(cfg), server(nullptr), statusProvider(nullptr), ledStrip(led),
           wifiManager(nullptr), wifiSettings(nullptr), lcd(nullptr),
           otaManager(nullptr),
@@ -155,7 +155,7 @@ public:
      * @brief Установить указатель на RGBLED
      * @param led Указатель на RGBLED
      */
-    void setLEDStrip(HAL::RGBLED *led) {
+    void setLEDStrip(RGBLED *led) {
         ledStrip = led;
     }
 
@@ -163,7 +163,7 @@ public:
      * @brief Установить менеджер WiFi для конфигурации
      * @param manager Указатель на WiFiManager
      */
-    void setWiFiManager(HAL::WiFiManager *manager) {
+    void setWiFiManager(WiFiManager *manager) {
         wifiManager = manager;
     }
 
@@ -171,7 +171,7 @@ public:
      * @brief Установить хранилище настроек WiFi
      * @param settings Указатель на WiFiSettings
      */
-    void setWiFiSettings(HAL::WiFiSettings *settings) {
+    void setWiFiSettings(WiFiSettings *settings) {
         wifiSettings = settings;
     }
 
@@ -179,7 +179,7 @@ public:
      * @brief Установить указатель на LCD
      * @param lcd Указатель на LCD
      */
-    void setLCD(HAL::LCD *display) {
+    void setLCD(LCD2004 *display) {
         lcd = display;
     }
 
@@ -333,7 +333,7 @@ private:
             uint32_t freq = server->arg("frequency").toInt();
             // Valid range: 1Hz - 20000Hz (ESP32 LEDC typical range)
             if (freq >= 1 && freq <= 20000) {
-                const_cast<HAL::RGBLEDConfig &>(ledStrip->getConfig()).pwmFrequency = freq;
+                const_cast<RGBLEDConfig &>(ledStrip->getConfig()).pwmFrequency = freq;
                 Serial.println("LED PWM: Frequency changed to " + String(freq) + "Hz");
                 updated = true;
             } else {
@@ -347,7 +347,7 @@ private:
             uint8_t res = server->arg("resolution").toInt();
             // Valid range: 1-16 bits
             if (res >= 1 && res <= 16) {
-                const_cast<HAL::RGBLEDConfig &>(ledStrip->getConfig()).pwmResolution = res;
+                const_cast<RGBLEDConfig &>(ledStrip->getConfig()).pwmResolution = res;
                 Serial.println("LED PWM: Resolution changed to " + String(res) + " bits");
                 updated = true;
             } else {

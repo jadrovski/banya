@@ -12,7 +12,7 @@
  */
 class DallasSensorsPage : public DisplayPage {
 private:
-    HAL::DS18B20Manager* dsManager;
+    DS18B20Manager* dsManager;
     float lastTemp1;
     float lastTemp2;
     float lastTemp3;
@@ -20,7 +20,7 @@ private:
     const unsigned long updateInterval;
 
 public:
-    DallasSensorsPage(HAL::DS18B20Manager* ds, const String& title = "Dallas Sensors", unsigned long interval = 1000)
+    DallasSensorsPage(DS18B20Manager* ds, const String& title = "Dallas Sensors", unsigned long interval = 1000)
         : DisplayPage(title, 0),
           dsManager(ds),
           lastTemp1(-127),
@@ -37,14 +37,14 @@ public:
         lastTemp3 = -127;
     }
 
-    void render(HAL::LCD& lcd, bool force = false) override {
+    void render(LCD2004& lcd, bool force = false) override {
         if (!dsManager) return;
 
         updateDisplay(lcd, force);
     }
 
 private:
-    void updateDisplay(HAL::LCD& lcd, bool force) {
+    void updateDisplay(LCD2004& lcd, bool force) {
         unsigned long now = millis();
         bool needUpdate = force || (now - lastUpdate >= updateInterval);
 

@@ -6,8 +6,6 @@
 #include <WebServer.h>
 #include <DNSServer.h>
 
-namespace HAL {
-
 /**
  * @brief Режим работы WiFi
  */
@@ -594,7 +592,5 @@ public:
         return info;
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_WIFI_H

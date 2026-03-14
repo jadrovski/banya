@@ -54,7 +54,7 @@ constexpr uint32_t TOUCH_VERY_LONG_PRESS_MS = 5000;
 // ============================================================================
 
 // Конфигурация и создание HAL-объектов
-HAL::LCDConfig lcdConfig(
+LCD2004Config lcdConfig(
     LCD_I2C_ADDR,
     I2C_SDA_PIN,
     I2C_SCL_PIN,
@@ -63,39 +63,39 @@ HAL::LCDConfig lcdConfig(
     true,
     false
 );
-HAL::LCD lcd(lcdConfig);
+LCD2004 lcd(lcdConfig);
 
-HAL::BME280Config bmeConfig(BME280_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN, SEA_LEVEL_PRESSURE_HPA);
-HAL::BME280Sensor bme(bmeConfig);
+BME280Config bmeConfig(BME280_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN, SEA_LEVEL_PRESSURE_HPA);
+BME280Sensor bme(bmeConfig);
 
-HAL::DS18B20Config dsConfig(DS18B20_PIN, 12, false, DS18B20_UPDATE_INTERVAL);
-HAL::DS18B20Manager ds18b20(dsConfig);
+DS18B20Config dsConfig(DS18B20_PIN, 12, false, DS18B20_UPDATE_INTERVAL);
+DS18B20Manager ds18b20(dsConfig);
 
-HAL::RGBLEDConfig ledConfig(LED_R_PIN, LED_G_PIN, LED_B_PIN,
+RGBLEDConfig ledConfig(LED_R_PIN, LED_G_PIN, LED_B_PIN,
                             LEDC_CHANNEL_R, LEDC_CHANNEL_G, LEDC_CHANNEL_B,
                             1000, 8, 2.2f, true);
-HAL::RGBLED ledStrip(ledConfig);
+RGBLED ledStrip(ledConfig);
 
 // WiFi и веб-сервер
-HAL::WiFiSettings wifiSettings;
-HAL::WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
-HAL::WiFiManager wifi(wifiConfig);
+WiFiSettings wifiSettings;
+WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
+WiFiManager wifi(wifiConfig);
 BanyaWebServer webServer;
 
 // OTA конфигурация
-HAL::OTAConfig otaConfig;
-HAL::OTAManager ota(otaConfig);
-HAL::LCDOTAPresenter otaPresenter(&lcd);
+OTAConfig otaConfig;
+OTAManager ota(otaConfig);
+LCDOTAPresenter otaPresenter(&lcd);
 
 // Touch сенсор
-HAL::TouchConfig touchConfig(
+TouchConfig touchConfig(
     TOUCH_PIN,
     TOUCH_THRESHOLD_PERCENT,
     TOUCH_DEBOUNCE_MS,
     TOUCH_LONG_PRESS_MS,
     TOUCH_VERY_LONG_PRESS_MS
 );
-HAL::TouchSensor touch(touchConfig);
+TouchSensor touch(touchConfig);
 
 // Менеджер страниц
 PageManager pageMgr;
@@ -162,13 +162,13 @@ BanyaStatus getBanyaStatus() {
  * - Long press: WiFi reconnect
  * - Very-long press: Enter WiFi Setup Mode (AP mode)
  */
-void handleTouchCallback(HAL::TouchEvent event) {
+void handleTouchCallback(TouchEvent event) {
     switch (event) {
-        case HAL::TouchEvent::LONG_PRESS:
+        case TouchEvent::LONG_PRESS:
             wifi.reconnect();
             break;
 
-        case HAL::TouchEvent::VERY_LONG_PRESS:
+        case TouchEvent::VERY_LONG_PRESS:
             // Enter WiFi Setup Mode
             Serial.println("Touch: Very-long press - Entering WiFi Setup Mode...");
 
@@ -185,7 +185,7 @@ void handleTouchCallback(HAL::TouchEvent event) {
             }
             break;
 
-        case HAL::TouchEvent::TAP:
+        case TouchEvent::TAP:
             pageMgr.nextPage();
             break;
 
@@ -341,7 +341,7 @@ void setup() {
 
         // Загружаем credentials из NVS
         if (wifiSettings.isConfigured()) {
-            HAL::WiFiCredentials creds = wifiSettings.getCredentials();
+            WiFiCredentials creds = wifiSettings.getCredentials();
             wifiConfig.ssid = strdup(creds.ssid.c_str());
             wifiConfig.password = strdup(creds.password.c_str());
             wifiConfig.autoReconnect = true;

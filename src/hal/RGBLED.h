@@ -8,8 +8,6 @@
 #include "../color/HSL.h"
 #include "../color/TemperatureColor.h"
 
-namespace HAL {
-
 /**
  * @brief Конфигурация RGB LED
  */
@@ -376,7 +374,5 @@ protected:
         writeToPWM(currentColor.red, currentColor.green, currentColor.blue);
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_RGBLED_H

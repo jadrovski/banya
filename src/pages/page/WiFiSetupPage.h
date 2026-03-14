@@ -16,8 +16,8 @@
  */
 class WiFiSetupPage : public DisplayPage {
 private:
-    HAL::WiFiManager* wifiManager;
-    HAL::WiFiSettings* wifiSettings;
+    WiFiManager* wifiManager;
+    WiFiSettings* wifiSettings;
     String lastAPIP;
     String lastAPSSID;
     unsigned long lastUpdate;
@@ -25,7 +25,7 @@ private:
     bool apEnabled;
 
 public:
-    WiFiSetupPage(HAL::WiFiManager* mgr, HAL::WiFiSettings* settings, const String& title = "WiFi Setup")
+    WiFiSetupPage(WiFiManager* mgr, WiFiSettings* settings, const String& title = "WiFi Setup")
         : DisplayPage(title, 3),
           wifiManager(mgr),
           wifiSettings(settings),
@@ -39,7 +39,7 @@ public:
         apEnabled = false;
     }
 
-    void render(HAL::LCD& lcd, bool force = false) override {
+    void render(LCD2004& lcd, bool force = false) override {
         if (!wifiManager) return;
 
         unsigned long now = millis();
@@ -50,7 +50,7 @@ public:
 
         // Проверяем, включён ли AP режим
         bool currentAPEnabled = wifiManager->isAPEnabled();
-        const HAL::APConfig& apCfg = wifiManager->getAPConfig();
+        const APConfig& apCfg = wifiManager->getAPConfig();
         const String apiP = wifiManager->getAPIPAddressString();
 
         // Строка 0: Заголовок со статусом AP (ON/OFF)

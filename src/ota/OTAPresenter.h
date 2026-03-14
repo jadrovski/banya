@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 
-namespace HAL {
-
 /**
  * @brief OTA Progress data structure
  */
@@ -60,7 +58,5 @@ public:
      */
     virtual void showError(OTAErrorType errorType, const String& message) = 0;
 };
-
-} // namespace HAL
 
 #endif // BANYA_OTA_PRESENTER_H

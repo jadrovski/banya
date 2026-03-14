@@ -13,12 +13,12 @@
  */
 class SystemStatusPage : public DisplayPage {
 private:
-    HAL::WiFiManager* wifi;
+    WiFiManager* wifi;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
 public:
-    SystemStatusPage(HAL::WiFiManager* mgr, const String& title = "System Status")
+    SystemStatusPage(WiFiManager* mgr, const String& title = "System Status")
         : DisplayPage(title, 3),
           wifi(mgr),
           lastUpdate(0),
@@ -29,7 +29,7 @@ public:
         lastUpdate = 0;
     }
 
-    void render(HAL::LCD& lcd, bool force = false) override {
+    void render(LCD2004& lcd, bool force = false) override {
         unsigned long now = millis();
         bool needUpdate = force || (now - lastUpdate >= updateInterval);
 

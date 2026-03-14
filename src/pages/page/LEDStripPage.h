@@ -16,7 +16,7 @@
  */
 class LEDStripPage : public DisplayPage {
 private:
-    HAL::RGBLED* ledStrip;
+    RGBLED* ledStrip;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
@@ -26,7 +26,7 @@ public:
      * @param strip Указатель на объект RGBLED
      * @param title Заголовок страницы
      */
-    LEDStripPage(HAL::RGBLED* strip,
+    LEDStripPage(RGBLED* strip,
                  const String& title = "LED Strip Status")
         : DisplayPage(title, 0),
           ledStrip(strip),
@@ -46,7 +46,7 @@ public:
      * @param lcd Ссылка на LCD дисплей
      * @param force Принудительная перерисовка
      */
-    void render(HAL::LCD& lcd, bool force = false) override {
+    void render(LCD2004& lcd, bool force = false) override {
         unsigned long now = millis();
         bool needUpdate = force || (now - lastUpdate >= updateInterval);
 

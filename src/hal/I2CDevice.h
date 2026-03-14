@@ -4,8 +4,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-namespace HAL {
-
 /**
  * @brief Базовый класс для всех I2C устройств
  * 
@@ -71,7 +69,5 @@ public:
         return String("I2C Device @ 0x") + String(i2cAddress, HEX);
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_I2C_DEVICE_H

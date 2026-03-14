@@ -1,11 +1,10 @@
-#ifndef BANYA_HAL_LCD_H
-#define BANYA_HAL_LCD_H
+#ifndef BANYA_HAL_LCD2004_H
+#define BANYA_HAL_LCD2004_H
 
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
 #include "I2CDevice.h"
 
-namespace HAL {
 #define WIFI_CHAR byte(1)
 #define RUSSIAN_B_CHAR byte(2)
 #define RUSSIAN_YA_CHAR byte(3)
@@ -13,7 +12,7 @@ namespace HAL {
     /**
      * @brief Конфигурация LCD дисплея
      */
-    struct LCDConfig {
+    struct LCD2004Config {
         uint8_t i2cAddress; // I2C адрес (по умолчанию 0x27)
         uint8_t sdaPin; // GPIO SDA (по умолчанию 21)
         uint8_t sclPin; // GPIO SCL (по умолчанию 22)
@@ -22,7 +21,7 @@ namespace HAL {
         bool backlightOnStart; // Подсветка включена при старте (по умолчанию true)
         bool cursorOnStart; // Курсор включен при старте (по умолчанию false)
 
-        LCDConfig(
+        LCD2004Config(
             uint8_t addr = 0x27,
             uint8_t sda = 21,
             uint8_t scl = 22,
@@ -41,7 +40,7 @@ namespace HAL {
      * Инкапсулирует управление LCD дисплеем с I2C интерфейсом.
      * Поддерживает дисплеи 20x4, 16x2 и другие совместимые.
      */
-    class LCD : public I2CDevice {
+    class LCD2004 : public I2CDevice {
     private:
         static const byte smiley[8];
         static const byte russianB[8];
@@ -50,7 +49,7 @@ namespace HAL {
         static const byte touchIcon[8];
         static const byte arrowRight[8];
 
-        LCDConfig config;
+        LCD2004Config config;
         LiquidCrystal_I2C *lcd;
         bool backlightState;
         bool cursorState;
@@ -78,7 +77,7 @@ namespace HAL {
          * @brief Конструктор LCD
          * @param cfg Конфигурация дисплея
          */
-        explicit LCD(const LCDConfig &cfg = LCDConfig())
+        explicit LCD2004(const LCD2004Config &cfg = LCD2004Config())
             : I2CDevice(cfg.i2cAddress, cfg.sdaPin, cfg.sclPin),
               config(cfg),
               lcd(nullptr),
@@ -86,7 +85,7 @@ namespace HAL {
               cursorState(cfg.cursorOnStart) {
         }
 
-        ~LCD() override {
+        ~LCD2004() override {
             delete lcd;
         }
 
@@ -363,14 +362,14 @@ namespace HAL {
         /**
          * @brief Получить конфигурацию
          */
-        const LCDConfig &getConfig() const { return config; }
+        const LCD2004Config &getConfig() const { return config; }
     };
 
     // ============================================================================
-    // Определения пользовательских символов LCD (https://maxpromer.github.io/LCD-Character-Creator/)
+    // Определения пользовательских символов LCD2004 (https://maxpromer.github.io/LCD-Character-Creator/)
     // ============================================================================
 
-    const byte LCD::smiley[8] = {
+    const byte LCD2004::smiley[8] = {
         B00000,
         B10001,
         B00000,
@@ -380,7 +379,7 @@ namespace HAL {
         B00000,
     };
 
-    const byte LCD::russianB[8] = {
+    const byte LCD2004::russianB[8] = {
         B11111,
         B10000,
         B10000,
@@ -391,7 +390,7 @@ namespace HAL {
         B00000
     };
 
-    const byte LCD::russianYA[8] = {
+    const byte LCD2004::russianYA[8] = {
         B01111,
         B10001,
         B10001,
@@ -402,7 +401,7 @@ namespace HAL {
         B00000
     };
 
-    const byte LCD::wifiIcon[8] = {
+    const byte LCD2004::wifiIcon[8] = {
         B00000,
         B00000,
         B01110,
@@ -413,7 +412,7 @@ namespace HAL {
         B00100
     };
 
-    const byte LCD::touchIcon[8] = {
+    const byte LCD2004::touchIcon[8] = {
         B00100,
         B01110,
         B11111,
@@ -424,7 +423,7 @@ namespace HAL {
         B00000,
     };
 
-    const byte LCD::arrowRight[8] = {
+    const byte LCD2004::arrowRight[8] = {
         B00000,
         B00010,
         B00110,
@@ -435,6 +434,4 @@ namespace HAL {
         B00000,
     };
 
-} // namespace HAL
-
-#endif // BANYA_HAL_LCD_H
+#endif // BANYA_HAL_LCD2004_H

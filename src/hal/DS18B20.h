@@ -6,8 +6,6 @@
 #include <DallasTemperature.h>
 #include "I2CDevice.h"
 
-namespace HAL {
-
 /**
  * @brief Конфигурация DS18B20
  */
@@ -326,7 +324,5 @@ public:
         }
     }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_DS18B20_H

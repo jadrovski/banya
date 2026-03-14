@@ -9,14 +9,14 @@
  */
 class WiFiInfoPage : public DisplayPage {
 private:
-    HAL::WiFiManager* wifi;
+    WiFiManager* wifi;
     String lastIP;
     String lastStatus;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
 public:
-    WiFiInfoPage(HAL::WiFiManager* mgr, const String& title = "WiFi Info")
+    WiFiInfoPage(WiFiManager* mgr, const String& title = "WiFi Info")
         : DisplayPage(title, 3),
           wifi(mgr),
           lastUpdate(0),
@@ -27,7 +27,7 @@ public:
         lastUpdate = 0;
     }
 
-    void render(HAL::LCD& lcd, bool force = false) override {
+    void render(LCD2004& lcd, bool force = false) override {
         if (!wifi) return;
 
         unsigned long now = millis();

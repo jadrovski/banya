@@ -9,7 +9,7 @@
  */
 class BME280Page : public DisplayPage {
 private:
-    HAL::BME280Sensor* bme;
+    BME280Sensor* bme;
     float lastTemp;
     float lastHumidity;
     float lastPressure;
@@ -18,7 +18,7 @@ private:
     const float hpaToMmHg;
 
 public:
-    BME280Page(HAL::BME280Sensor* sensor, const String& title = "BME280 Sensor", float hpaConv = 0.75006156f)
+    BME280Page(BME280Sensor* sensor, const String& title = "BME280 Sensor", float hpaConv = 0.75006156f)
         : DisplayPage(title, 1),
           bme(sensor),
           lastTemp(-100),
@@ -33,7 +33,7 @@ public:
         lastUpdate = 0;
     }
 
-    void render(HAL::LCD& lcd, bool force = false) override {
+    void render(LCD2004& lcd, bool force = false) override {
         if (!bme || !bme->isInitialized()) return;
 
         unsigned long now = millis();

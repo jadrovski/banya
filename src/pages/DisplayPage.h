@@ -32,7 +32,7 @@ public:
      * @param lcd Ссылка на LCD дисплей
      * @param forceForce Принудительная перерисовка
      */
-    virtual void render(HAL::LCD& lcd, bool force = false) = 0;
+    virtual void render(LCD2004& lcd, bool force = false) = 0;
 
     /**
      * @brief Инициализация страницы (вызывается при переключении)

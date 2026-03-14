@@ -6,8 +6,6 @@
 #include <functional>
 #include "OTAPresenter.h"
 
-namespace HAL {
-
 /**
  * @brief OTA update status enumeration
  */
@@ -136,7 +134,5 @@ private:
     void setupCallbacks();
     void handleError(ota_error_t error);
 };
-
-} // namespace HAL
 
 #endif // BANYA_OTA_H

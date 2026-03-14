@@ -5,8 +5,6 @@
 #include <Adafruit_BME280.h>
 #include "I2CDevice.h"
 
-namespace HAL {
-
 /**
  * @brief Конфигурация BME280
  */
@@ -209,7 +207,5 @@ public:
      */
     const BME280Config& getConfig() const { return config; }
 };
-
-} // namespace HAL
 
 #endif // BANYA_HAL_BME280_H
