@@ -2,7 +2,6 @@
 #define BANYA_HAL_RGBLED_H
 
 #include <Arduino.h>
-#include "I2CDevice.h"
 #include "../color/RGB.h"
 #include "../color/HSV.h"
 #include "../color/HSL.h"
