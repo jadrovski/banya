@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-ESP32-based environmental monitoring and control system for banya (Russian sauna). Provides comprehensive sensor readings (temperature, humidity, pressure) with visual feedback through RGB LED strip and 20x4 LCD display. Features WiFi connectivity with web interface and touch sensor for navigation.
+ESP32-based environmental monitoring and control system for banya (Russian sauna). Provides comprehensive sensor readings (temperature, humidity, pressure) with visual feedback through RGB LED strip and 20x4 LCD display. Features WiFi connectivity with web interface and OTA update support.
 
 ## Hardware Components
 
@@ -34,40 +34,60 @@ Touch:     GPIO 15 (T3)
 ```
 src/
 ├── main.cpp              # Application entry point, sensor reading, LCD display
-├── LEDStrip.h/.cpp       # PWM-based RGB LED control with gamma correction
+├── IntervalTimer.h       # Non-blocking interval timer for periodic tasks
+├── adapter/
+│   └── LCDOTAPresenter.h # LCD display for OTA status
+├── color/
+│   ├── Color.h           # Abstract base class for color models
+│   ├── RGB.h/.cpp        # RGB color model with conversions
+│   ├── HSV.h/.cpp        # HSV color model
+│   ├── HSL.h/.cpp        # HSL color model
+│   ├── TemperatureColor.h/.cpp  # Color from temperature (Kelvin/Celsius)
+│   └── BanyaColors.h     # Preset colors for banya states
 ├── hal/                  # Hardware Access Layer
 │   ├── HAL.h             # Main HAL include file
 │   ├── I2CDevice.h       # Base class for I2C devices
 │   ├── LCD.h             # LCD 2004 I2C display
 │   ├── BME280.h          # Environmental sensor
 │   ├── DS18B20.h         # OneWire temperature sensors
-│   ├── RGBLED.h          # RGB LED via PWM (LEDC)
-│   ├── WiFi.h            # WiFi manager
-│   ├── WebServer.h       # HTTP web server
-│   ├── Touch.h           # Touch sensor
-│   ├── PageManager.h     # Display page manager
+│   ├── RGBLED.h/.cpp     # RGB LED via PWM (LEDC)
+│   ├── WiFi.h            # WiFi manager with AP/STA modes
+│   ├── WiFiSettings.h    # NVS-based WiFi credentials storage
+│   └── Touch.h           # Touch sensor with tap/long-press detection
+├── ota/
+│   ├── OTA.h             # OTA update manager
+│   └── OTAPresenter.h    # OTA progress presenter interface
+├── pages/
 │   ├── DisplayPage.h     # Base display page class
-│   └── pages/            # Display page implementations
-└── color/
-    ├── Color.h           # Abstract base class for color models
-    ├── RGB.h/.cpp        # RGB color model with conversions
-    ├── HSV.h/.cpp        # HSV color model
-    ├── HSL.h/.cpp        # HSL color model
-    ├── TemperatureColor.h/.cpp  # Color from temperature (Kelvin/Celsius)
-    └── BanyaColors.h     # Preset colors for banya states
+│   ├── DisplayPages.h    # Convenience header for all pages
+│   ├── PageManager.h     # Display page manager
+│   └── page/
+│       ├── BME280Page.h       # BME280 sensor data page
+│       ├── DallasSensorsPage.h # DS18B20 temperatures page
+│       ├── LEDStripPage.h     # LED strip status page
+│       ├── Sensors.h          # Convenience header for sensor pages
+│       ├── SystemStatusPage.h # WiFi and system status page
+│       ├── WiFiInfoPage.h     # WiFi connection info page
+│       └── WiFiSetupPage.h    # WiFi AP mode setup page
+└── web/
+    └── WebServer.h       # HTTP web server with JSON API
 ```
 
 ### Key Classes
 
-- **`LEDStrip`**: Low-level PWM control for RGB LEDs with gamma correction (2.2), brightness control, and basic effects
-- **`HAL::LCD`**: LCD 2004 I2C display with custom character support
+- **`IntervalTimer`**: Non-blocking timer for periodic tasks
+- **`LEDStrip`**: PWM-based RGB LED control with gamma correction
+- **`HAL::LCD2004`**: LCD 2004 I2C display with custom character support
 - **`HAL::BME280Sensor`**: BME280 environmental sensor wrapper
 - **`HAL::DS18B20Manager`**: DS18B20 OneWire sensor manager (supports multiple sensors)
 - **`HAL::RGBLED`**: RGB LED via ESP32 LEDC with gamma correction
-- **`HAL::WiFiManager`**: WiFi connection manager with auto-reconnect
+- **`HAL::WiFiManager`**: WiFi connection manager with auto-reconnect and AP mode
+- **`HAL::WiFiSettings`**: NVS-based WiFi credentials storage
 - **`HAL::BanyaWebServer`**: HTTP web server with JSON API
 - **`HAL::TouchSensor`**: ESP32 touch sensor with tap/long-press detection
 - **`HAL::PageManager`**: Multi-page display manager
+- **`DisplayPage`**: Base class for all display pages
+- **`OTAManager`**: OTA update manager with progress callbacks
 - **Color Models**: `RGB`, `HSV`, `HSL`, `TemperatureColor` - all convertible via the `Color` base class
 
 ## Building and Running
@@ -94,35 +114,38 @@ pio run --target upload
 
 # Clean build artifacts
 pio run --target clean
+
+# Count lines of code
+./scripts/count_loc.sh
 ```
-
-### WiFi Configuration
-
-WiFi credentials are stored in NVS (Non-Volatile Storage) and configured via:
-
-1. **AP Mode Setup**: Connect to the device's access point and configure via web interface
-2. **Touch Sensor**: Long press (>5s) to enter WiFi setup mode
-
-On first boot, the device automatically starts in AP mode for initial configuration.
 
 ### Dependencies (from `platformio.ini`)
 
-- `iakop/LiquidCrystal_I2C_ESP32` @ ^1.1.6 - LCD display driver
 - `milesburton/DallasTemperature` @ ^3.11.0 - DS18B20 temperature sensors
 - `paulstoffregen/OneWire` @ ^2.3.7 - OneWire protocol
 - `adafruit/Adafruit BME280 Library` @ ^2.3.0 - Environmental sensor
 
+## WiFi Configuration
+
+WiFi credentials are stored in NVS (Non-Volatile Storage) and configured via:
+
+1. **AP Mode Setup**: Connect to the device's access point and configure via web interface
+2. **Touch Sensor**: Long press (>1s) to reconnect, very long press (>5s) to reboot
+
+On first boot or WiFi failure, the device automatically starts in AP mode for initial configuration.
+
 ## Operating Modes
 
-| Mode | Command | Description |
-|------|---------|-------------|
-| Auto | `A` | Automatic mode selection based on conditions |
-| Temperature | `T` | Color reflects temperature |
-| Humidity | `H` | Color reflects humidity |
-| Comfort | `C` | Color based on heat index |
-| Safety | `S` | Warning colors for dangerous conditions |
-| Relax | `R` | Slow color cycling for relaxation |
-| Manual | `M` | Direct brightness/color control |
+The system supports multiple display pages accessible via touch sensor or serial commands:
+
+| Page | Description |
+|------|-------------|
+| BME280 | Temperature, humidity, pressure from BME280 |
+| Dallas Sensors | DS18B20 temperature readings |
+| LED Strip | LED configuration and status |
+| System Status | WiFi status, IP address, memory info |
+| WiFi Info | Connected WiFi network details |
+| WiFi Setup | AP mode configuration (when not connected) |
 
 ## Serial Interface
 
@@ -158,10 +181,10 @@ Row 3: HU: [humidity]%        (BME280)
 
 | Condition | Threshold | Action |
 |-----------|-----------|--------|
-| High Temperature | > 90°C | Safety mode (yellow) |
-| Critical Temperature | > 95°C | Danger indicator (red) |
+| High Temperature | > 90°C | Warning (yellow) |
+| Critical Temperature | > 95°C | Danger (red) |
 | High Humidity | > 70% | Warning |
-| Critical Humidity | > 80% | Danger indicator |
+| Critical Humidity | > 80% | Danger |
 
 ## Web Interface
 
@@ -170,8 +193,8 @@ Access via `http://<device_ip>` after WiFi connection.
 Features:
 - Real-time sensor status (temperatures, humidity, pressure)
 - WiFi status indicator
-- Operating mode display
 - Auto-refresh every 2 seconds
+- JSON API endpoint at `/api/status`
 
 ## Development Conventions
 
@@ -180,7 +203,7 @@ Features:
 - **File naming**: PascalCase for classes (e.g., `LEDStrip.cpp`)
 - **Namespaces**: `HAL` for hardware layer, `BanyaColors` for color presets
 - **Includes**: Quotes for local headers, angle brackets for libraries
-- **Guard macros**: `#ifndef BANYA_<NAME>_H` format
+- **Guard macros**: All headers use `#pragma once`
 
 ### Color System
 
@@ -195,6 +218,12 @@ Flexible color model hierarchy:
 - Virtual `begin()` method for initialization
 - `getInfo()` method for diagnostics
 - Non-blocking `handleLoop()` for async operations
+
+### Display Pages
+
+- All pages inherit from `DisplayPage` base class
+- Implement `render(LCD2004&, bool force)` for display updates
+- Use `onEnter()` and `onExit()` for lifecycle hooks
 
 ## Testing
 
