@@ -30,7 +30,7 @@ public:
         : DisplayPage(title, 0),
           ledStrip(strip),
           lastUpdate(0),
-          updateInterval(500) {}
+          updateInterval(1000) {}
 
     /**
      * @brief Инициализация при входе на страницу

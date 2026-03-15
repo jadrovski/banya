@@ -29,7 +29,7 @@ public:
           wifiManager(mgr),
           wifiSettings(settings),
           lastUpdate(0),
-          updateInterval(500),
+          updateInterval(1000),
           apEnabled(false) {}
 
     void onEnter() override {
