@@ -1,5 +1,4 @@
-#ifndef BANYA_INTERVAL_TIMER_H
-#define BANYA_INTERVAL_TIMER_H
+#pragma once
 
 #include <Arduino.h>
 #include <functional>
@@ -123,5 +122,3 @@ public:
         return interval - elapsed;
     }
 };
-
-#endif // BANYA_INTERVAL_TIMER_H

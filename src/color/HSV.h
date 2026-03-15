@@ -1,5 +1,4 @@
-#ifndef BANYA_HSV_H
-#define BANYA_HSV_H
+#pragma once
 #include "Arduino.h"
 #include "Color.h"
 
@@ -44,5 +43,3 @@ public:
 
     String toString() const override;
 };
-
-#endif //BANYA_HSV_H

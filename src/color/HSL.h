@@ -1,5 +1,4 @@
-#ifndef BANYA_HSL_H
-#define BANYA_HSL_H
+#pragma once
 
 #include "Color.h"
 
@@ -42,6 +41,3 @@ public:
 
     String toString() const override;
 };
-
-
-#endif //BANYA_HSL_H

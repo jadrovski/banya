@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_RGBLED_H
-#define BANYA_HAL_RGBLED_H
+#pragma once
 
 #include <Arduino.h>
 #include "../color/RGB.h"
@@ -373,5 +372,3 @@ protected:
         writeToPWM(currentColor.red, currentColor.green, currentColor.blue);
     }
 };
-
-#endif // BANYA_HAL_RGBLED_H

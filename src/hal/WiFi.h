@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_WIFI_H
-#define BANYA_HAL_WIFI_H
+#pragma once
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -592,5 +591,3 @@ public:
         return info;
     }
 };
-
-#endif // BANYA_HAL_WIFI_H

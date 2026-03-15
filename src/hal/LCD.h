@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_LCD2004_H
-#define BANYA_HAL_LCD2004_H
+#pragma once
 
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
@@ -433,5 +432,3 @@
         B00000,
         B00000,
     };
-
-#endif // BANYA_HAL_LCD2004_H

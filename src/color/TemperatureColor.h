@@ -1,5 +1,4 @@
-#ifndef BANYA_TEMPERATURECOLOR_H
-#define BANYA_TEMPERATURECOLOR_H
+#pragma once
 #include "Arduino.h"
 #include "Color.h"
 
@@ -47,5 +46,3 @@ public:
     static TemperatureColor overcast() { return TemperatureColor(7500); }
     static TemperatureColor shade() { return TemperatureColor(9000); }
 };
-
-#endif //BANYA_TEMPERATURECOLOR_H

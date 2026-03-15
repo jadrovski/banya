@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_TOUCH_H
-#define BANYA_HAL_TOUCH_H
+#pragma once
 
 #include <Arduino.h>
 #include <driver/touch_pad.h>
@@ -550,5 +549,3 @@ public:
      */
     const TouchConfig &getConfig() const { return config; }
 };
-
-#endif // BANYA_HAL_TOUCH_H

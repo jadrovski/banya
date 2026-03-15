@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_BME280_H
-#define BANYA_HAL_BME280_H
+#pragma once
 
 #include <Arduino.h>
 #include <Adafruit_BME280.h>
@@ -207,5 +206,3 @@ public:
      */
     const BME280Config& getConfig() const { return config; }
 };
-
-#endif // BANYA_HAL_BME280_H

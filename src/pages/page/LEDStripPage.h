@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGES_LEDSTRIP_H
-#define BANYA_HAL_PAGES_LEDSTRIP_H
+#pragma once
 
 #include "../DisplayPage.h"
 #include "../../hal/RGBLED.h"
@@ -92,5 +91,3 @@ public:
         lcd.line_printf(3, "Fr: %d Res: %d", ledStrip->getConfig().pwmFrequency, ledStrip->getConfig().pwmResolution);
     }
 };
-
-#endif // BANYA_HAL_PAGES_LEDSTRIP_H

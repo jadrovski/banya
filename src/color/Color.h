@@ -1,5 +1,4 @@
-#ifndef BANYA_COLOR_H
-#define BANYA_COLOR_H
+#pragma once
 
 // Forward declarations
 class RGB;
@@ -19,6 +18,3 @@ public:
 
     virtual String toString() const = 0;
 };
-
-
-#endif //BANYA_COLOR_H

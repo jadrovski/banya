@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_WEBSERVER_H
-#define BANYA_HAL_WEBSERVER_H
+#pragma once
 
 #include <Arduino.h>
 #include <WebServer.h>
@@ -1985,5 +1984,3 @@ h1 {
         return html;
     }
 };
-
-#endif // BANYA_HAL_WEBSERVER_H

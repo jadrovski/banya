@@ -1,5 +1,4 @@
-#ifndef BANYA_LCD_OTA_PRESENTER_H
-#define BANYA_LCD_OTA_PRESENTER_H
+#pragma once
 
 #include "../ota/OTAPresenter.h"
 #include "../hal/LCD.h"
@@ -101,5 +100,3 @@ public:
 private:
     LCD2004* lcd = nullptr;
 };
-
-#endif // BANYA_LCD_OTA_PRESENTER_H

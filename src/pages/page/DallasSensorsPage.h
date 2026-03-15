@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGES_DALLAS_SENSORS_H
-#define BANYA_HAL_PAGES_DALLAS_SENSORS_H
+#pragma once
 
 #include "../DisplayPage.h"
 #include "../../hal/DS18B20.h"
@@ -84,5 +83,3 @@ private:
         }
     }
 };
-
-#endif // BANYA_HAL_PAGES_DALLAS_SENSORS_H

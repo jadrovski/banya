@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGE_MANAGER_H
-#define BANYA_HAL_PAGE_MANAGER_H
+#pragma once
 
 #include <Arduino.h>
 #include <vector>
@@ -228,5 +227,3 @@ inline void drawPageIndicator(LCD2004& lcd, uint8_t current, uint8_t total) {
     // Подсказка
     lcd.print(" >Next");
 }
-
-#endif // BANYA_HAL_PAGE_MANAGER_H

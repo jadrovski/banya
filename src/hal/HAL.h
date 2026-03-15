@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_H
-#define BANYA_HAL_H
+#pragma once
 
 /**
  * @file HAL.h
@@ -40,5 +39,3 @@
 #include "hal/WiFi.h"
 #include "hal/WiFiSettings.h"
 #include "hal/Touch.h"
-
-#endif // BANYA_HAL_H

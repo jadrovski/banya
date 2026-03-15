@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGES_WIFI_INFO_H
-#define BANYA_HAL_PAGES_WIFI_INFO_H
+#pragma once
 
 #include "../DisplayPage.h"
 #include "../../hal/WiFi.h"
@@ -68,5 +67,3 @@ public:
         lastStatus = wifi->getStatusString();
     }
 };
-
-#endif // BANYA_HAL_PAGES_WIFI_INFO_H

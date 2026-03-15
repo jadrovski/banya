@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGES_STATUS_H
-#define BANYA_HAL_PAGES_STATUS_H
+#pragma once
 
 #include "../DisplayPage.h"
 #include "../../hal/WiFi.h"
@@ -67,5 +66,3 @@ public:
         lcd.print("KB ");
     }
 };
-
-#endif // BANYA_HAL_PAGES_STATUS_H

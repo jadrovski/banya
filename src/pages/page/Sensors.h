@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGES_SENSORS_H
-#define BANYA_HAL_PAGES_SENSORS_H
+#pragma once
 
 /**
  * @file Sensors.h
@@ -17,5 +16,3 @@
 #include "BME280Page.h"
 #include "WiFiInfoPage.h"
 #include "LEDStripPage.h"
-
-#endif // BANYA_HAL_PAGES_SENSORS_H

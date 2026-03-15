@@ -1,5 +1,4 @@
-#ifndef BANYA_OTA_H
-#define BANYA_OTA_H
+#pragma once
 
 #include <Arduino.h>
 #include <ArduinoOTA.h>
@@ -134,5 +133,3 @@ private:
     void setupCallbacks();
     void handleError(ota_error_t error);
 };
-
-#endif // BANYA_OTA_H

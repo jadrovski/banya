@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_DS18B20_H
-#define BANYA_HAL_DS18B20_H
+#pragma once
 
 #include <Arduino.h>
 #include <OneWire.h>
@@ -324,5 +323,3 @@ public:
         }
     }
 };
-
-#endif // BANYA_HAL_DS18B20_H

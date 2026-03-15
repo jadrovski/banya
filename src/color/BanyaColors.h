@@ -1,5 +1,4 @@
-#ifndef BANYA_COLORMODEL_H
-#define BANYA_COLORMODEL_H
+#pragma once
 
 #include "RGB.h"
 
@@ -25,5 +24,3 @@ namespace BanyaColors {
     static RGB fire() { return {255, 100, 0}; } // Fire orange
     static RGB ice() { return {100, 200, 255}; } // Ice blue
 }
-
-#endif // BANYA_COLORMODEL_H

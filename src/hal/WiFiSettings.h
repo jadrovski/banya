@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_WIFI_SETTINGS_H
-#define BANYA_HAL_WIFI_SETTINGS_H
+#pragma once
 
 #include <Arduino.h>
 #include <Preferences.h>
@@ -257,5 +256,3 @@ public:
         return info;
     }
 };
-
-#endif // BANYA_HAL_WIFI_SETTINGS_H

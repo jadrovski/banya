@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_I2C_DEVICE_H
-#define BANYA_HAL_I2C_DEVICE_H
+#pragma once
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -69,5 +68,3 @@ public:
         return String("I2C Device @ 0x") + String(i2cAddress, HEX);
     }
 };
-
-#endif // BANYA_HAL_I2C_DEVICE_H

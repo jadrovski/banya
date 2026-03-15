@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_DISPLAY_PAGES_H
-#define BANYA_HAL_DISPLAY_PAGES_H
+#pragma once
 
 /**
  * @file DisplayPages.h
@@ -13,5 +12,3 @@
 
 #include "DisplayPage.h"
 #include "../hal/PageManager.h"
-
-#endif // BANYA_HAL_DISPLAY_PAGES_H

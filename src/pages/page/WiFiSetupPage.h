@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGES_WIFI_SETUP_H
-#define BANYA_HAL_PAGES_WIFI_SETUP_H
+#pragma once
 
 #include "../DisplayPage.h"
 #include "../../hal/WiFi.h"
@@ -99,5 +98,3 @@ public:
         return wifiManager->getAPStationCount();
     }
 };
-
-#endif // BANYA_HAL_PAGES_WIFI_SETUP_H

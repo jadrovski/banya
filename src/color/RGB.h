@@ -1,5 +1,4 @@
-#ifndef BANYA_RGB_H
-#define BANYA_RGB_H
+#pragma once
 #include "Arduino.h"
 #include "Color.h"
 
@@ -52,6 +51,3 @@ public:
 
     RGB operator*(float factor) const;
 };
-
-
-#endif //BANYA_RGB_H

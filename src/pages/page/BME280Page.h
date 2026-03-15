@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_PAGES_BME280_H
-#define BANYA_HAL_PAGES_BME280_H
+#pragma once
 
 #include "../DisplayPage.h"
 #include "../../hal/BME280.h"
@@ -64,5 +63,3 @@ public:
         lastPressure = pressure_mmHg;
     }
 };
-
-#endif // BANYA_HAL_PAGES_BME280_H

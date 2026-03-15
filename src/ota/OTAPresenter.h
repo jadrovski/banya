@@ -1,5 +1,4 @@
-#ifndef BANYA_OTA_PRESENTER_H
-#define BANYA_OTA_PRESENTER_H
+#pragma once
 
 #include <Arduino.h>
 
@@ -58,5 +57,3 @@ public:
      */
     virtual void showError(OTAErrorType errorType, const String& message) = 0;
 };
-
-#endif // BANYA_OTA_PRESENTER_H

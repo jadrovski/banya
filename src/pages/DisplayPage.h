@@ -1,5 +1,4 @@
-#ifndef BANYA_HAL_DISPLAY_PAGE_H
-#define BANYA_HAL_DISPLAY_PAGE_H
+#pragma once
 
 #include <Arduino.h>
 #include "../hal/LCD.h"
@@ -68,5 +67,3 @@ public:
      */
     bool isVisible() const { return visible; }
 };
-
-#endif // BANYA_HAL_DISPLAY_PAGE_H
