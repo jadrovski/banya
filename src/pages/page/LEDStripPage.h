@@ -69,14 +69,14 @@ public:
         
         // Brightness
         lcd.setCursor(10, 0);
-        lcd.print("B:");
+        lcd.print("Br: ");
         lcd.print((int)(ledStrip->getBrightness() * 100));
         lcd.print("%  ");
 
         // Row 1: Current Color (RGB)
         RGB color = ledStrip->getCurrentColor();
         lcd.setCursor(0, 1);
-        lcd.print("RGB:");
+        lcd.print("RGB: ");
         lcd.print(color.red);
         lcd.print(",");
         lcd.print(color.green);
@@ -86,8 +86,10 @@ public:
 
         // Row 2: Gamma and Effect
         lcd.setCursor(0, 2);
-        lcd.print("Gamma:");
+        lcd.print("Gamma: ");
         lcd.print(ledStrip->getConfig().enableGamma ? "ON " : "OFF");
+
+        lcd.line_printf(3, "Fr: %d Res: %d", ledStrip->getConfig().pwmFrequency, ledStrip->getConfig().pwmResolution);
     }
 };
 
