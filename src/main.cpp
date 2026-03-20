@@ -226,10 +226,10 @@ void setup() {
     lcd.setCursor(0, 2);
     lcd.print(wifiConfig.ssid);
 
-    bool wifiConnected = wifi.connect();
+    wifi.connect();
 
     // Инициализация OTA (только если WiFi подключён)
-    if (wifiConnected) {
+    if (wifi.isConnected()) {
         Serial.print("Initializing OTA... ");
         if (ota.begin()) {
             Serial.println("OK");
@@ -249,7 +249,7 @@ void setup() {
     webServer.setOTA(&ota);
     webServer.start();
 
-    if (wifiConnected) {
+    if (wifi.isConnected()) {
         Serial.printf("WebServer: Started on http://%s:%u\n", wifi.getIPAddressString().c_str(), webServer.getConfig().port);
     } else {
         Serial.println("WiFi: Failed to connect");
