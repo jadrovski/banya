@@ -103,14 +103,6 @@ TouchSensor touch(touchConfig);
 // Менеджер страниц
 PageManager pageMgr;
 
-// Страницы (будут созданы в setup)
-DallasSensorsPage *dallasPage = nullptr;
-BME280Page *bmePage = nullptr;
-DisplayPage *wifiPage = nullptr;
-SystemStatusPage *statusPage = nullptr;
-LEDStripPage *ledStripPage = nullptr;
-WiFiSetupPage *wifiSetupPage = nullptr;
-
 // ============================================================================
 // Функции LCD
 // ============================================================================
@@ -182,10 +174,8 @@ void handleTouchCallback(TouchEvent event) {
             }
 
             // Переходим на страницу настройки WiFi
-            if (wifiSetupPage) {
-                pageMgr.goToPage(4);
-                pageMgr.render();
-            }
+            pageMgr.goToPage(4);
+            pageMgr.render();
             break;
 
         case TouchEvent::TAP:
@@ -447,20 +437,12 @@ void setup() {
     // Создание страниц
     Serial.println("Creating display pages...");
 
-    dallasPage = new DallasSensorsPage(&ds18b20, "Dallas DS18B20");
-    bmePage = new BME280Page(&bme, "BME280 Sensor");
-    wifiPage = new WiFiInfoPage(&wifi, "WiFi Info");
-    wifiSetupPage = new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup");
-    statusPage = new SystemStatusPage(&wifi, "System Status");
-    ledStripPage = new LEDStripPage(&ledStrip, "LED Strip");
-
-    // Добавление страниц в менеджер
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(dallasPage));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(bmePage));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(ledStripPage));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(wifiPage));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(wifiSetupPage));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(statusPage));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(new DallasSensorsPage(&ds18b20, "Dallas DS18B20")));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(new BME280Page(&bme, "BME280 Sensor")));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(new LEDStripPage(&ledStrip, "LED Strip")));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiInfoPage(&wifi, "WiFi Info")));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
+    pageMgr.addPage(std::unique_ptr<DisplayPage>(new SystemStatusPage(&wifi, "System Status")));
 
     pageMgr.begin(&lcd);
 
