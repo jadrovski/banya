@@ -33,8 +33,8 @@ struct Status {
     uint8_t otaProgress; // OTA прогресс (0-100)
 
     Status() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
-                    sensor1Connected(false), sensor2Connected(false),
-                    otaProgress(0) {
+               sensor1Connected(false), sensor2Connected(false),
+               otaProgress(0) {
     }
 };
 
@@ -198,7 +198,7 @@ public:
      * @brief Получить конфигурацию веб-сервера
      * @return Конфигурация веб-сервера
      */
-    const WebServerConfig& getConfig() const { return config; }
+    const WebServerConfig &getConfig() const { return config; }
 
 private:
     /**
@@ -563,11 +563,8 @@ private:
 
         Serial.println("WiFi: Disabling AP mode...");
 
-        if (wifiManager->disableAP()) {
-            server->send(200, "application/json", "{\"success\":true}");
-        } else {
-            server->send(500, "application/json", "{\"error\":\"Failed to disable AP\"}");
-        }
+        wifiManager->disableAP();
+        server->send(200, "application/json", "{\"success\":true}");
     }
 
     /**

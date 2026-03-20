@@ -115,8 +115,6 @@ Status getStatus() {
 
 /**
  * @brief Callback для обработки событий Touch сенсора
- * - Long press: WiFi reconnect
- * - Very-long press: Enter WiFi Setup Mode (AP mode)
  */
 void handleTouchCallback(TouchEvent event) {
     switch (event) {
@@ -214,12 +212,8 @@ void setup() {
     }
 
     // Инициализация WiFi
-    Serial.print("Initializing WiFi... ");
-    if (wifi.begin()) {
-        Serial.println("OK");
-    } else {
-        Serial.println("FAILED");
-    }
+    wifi.begin();
+    Serial.print("Initialized WiFi");
 
     // Update WiFi credentials before connecting
     wifi.setCredentials(wifiConfig.ssid, wifiConfig.password);

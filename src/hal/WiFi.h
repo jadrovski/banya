@@ -9,48 +9,50 @@
  * @brief Режим работы WiFi
  */
 enum class WiFiMode {
-    STA,        // Station mode (client)
-    AP,         // Access Point mode
-    AP_STA,     // Both AP and Station
-    OFF         // WiFi off
+    STA, // Station mode (client)
+    AP, // Access Point mode
+    AP_STA, // Both AP and Station
+    OFF // WiFi off
 };
 
 /**
  * @brief Конфигурация WiFi
  */
 struct WiFiConfig {
-    const char* ssid;             // SSID сети
-    const char* password;         // Пароль
-    uint32_t connectionTimeout;   // Таймаут подключения (мс)
-    bool autoReconnect;           // Авто-переподключение
+    const char *ssid; // SSID сети
+    const char *password; // Пароль
+    uint32_t connectionTimeout; // Таймаут подключения (мс)
+    bool autoReconnect; // Авто-переподключение
 
     WiFiConfig(
-        const char* ssid = "",
-        const char* password = "",
+        const char *ssid = "",
+        const char *password = "",
         uint32_t timeout = 10000,
         bool autoReconn = true
     ) : ssid(ssid), password(password),
-        connectionTimeout(timeout), autoReconnect(autoReconn) {}
+        connectionTimeout(timeout), autoReconnect(autoReconn) {
+    }
 };
 
 /**
  * @brief Конфигурация Access Point
  */
 struct APConfig {
-    const char* ssid;             // SSID точки доступа
-    const char* password;         // Пароль (минимум 8 символов)
-    uint8_t channel;              // Канал (1-13)
-    bool ssidHidden;              // Скрытый SSID
-    uint8_t maxConnections;       // Максимум подключений (1-10)
+    const char *ssid; // SSID точки доступа
+    const char *password; // Пароль (минимум 8 символов)
+    uint8_t channel; // Канал (1-13)
+    bool ssidHidden; // Скрытый SSID
+    uint8_t maxConnections; // Максимум подключений (1-10)
 
     APConfig(
-        const char* ssid = "Banya-Ctl",
-        const char* password = "banya1234",
+        const char *ssid = "Banya-Ctl",
+        const char *password = "banya1234",
         uint8_t ch = 1,
         bool hidden = false,
         uint8_t maxConn = 4
     ) : ssid(ssid), password(password), channel(ch),
-        ssidHidden(hidden), maxConnections(maxConn) {}
+        ssidHidden(hidden), maxConnections(maxConn) {
+    }
 };
 
 /**
@@ -87,7 +89,7 @@ private:
     unsigned long reconnectStartTime;
     bool connectionAttempted;
     bool apModeEnabled;
-    
+
     // DNS сервер для captive portal
     std::unique_ptr<DNSServer> dnsServer;
     uint8_t dnsPort;
@@ -100,7 +102,7 @@ public:
      * @brief Конструктор WiFiManager
      * @param cfg Конфигурация WiFi
      */
-    explicit WiFiManager(const WiFiConfig& cfg = WiFiConfig())
+    explicit WiFiManager(const WiFiConfig &cfg = WiFiConfig())
         : staConfig(cfg),
           apConfig(),
           currentMode(WiFiMode::OFF),
@@ -113,22 +115,19 @@ public:
           apModeEnabled(false),
           dnsServer(nullptr),
           dnsPort(53),
-          statusCallback(nullptr) {}
+          statusCallback(nullptr) {
+    }
 
     /**
      * @brief Инициализация WiFi
-     * @return true если успешно
      */
-    bool begin() {
+    void begin() {
         // По умолчанию режим станции
-        WiFi.mode(WIFI_STA);
+        WiFiClass::mode(WIFI_STA);
         currentMode = WiFiMode::STA;
-
         // Настраиваем авто-переподключение
         WiFi.setAutoReconnect(staConfig.autoReconnect);
-
         status = WiFiStatus::DISCONNECTED;
-        return true;
     }
 
     /**
@@ -136,19 +135,19 @@ public:
      * @param cfg Конфигурация AP
      * @return true если успешно
      */
-    bool enableAP(const APConfig& cfg = APConfig()) {
+    bool enableAP(const APConfig &cfg = APConfig()) {
         apConfig = cfg;
-        
+
         Serial.print("WiFi: Enabling AP mode '");
         Serial.print(apConfig.ssid);
         Serial.println("'...");
 
         // Включаем режим AP или AP_STA
         if (status == WiFiStatus::CONNECTED) {
-            WiFi.mode(WIFI_AP_STA);
+            WiFiClass::mode(WIFI_AP_STA);
             currentMode = WiFiMode::AP_STA;
         } else {
-            WiFi.mode(WIFI_AP);
+            WiFiClass::mode(WIFI_AP);
             currentMode = WiFiMode::AP;
         }
 
@@ -165,13 +164,13 @@ public:
             apIpAddress = WiFi.softAPIP();
             apModeEnabled = true;
             status = WiFiStatus::CONNECTED;
-            
+
             Serial.print("WiFi: AP started, IP: ");
             Serial.println(apIpAddress);
-            
+
             // Запускаем DNS сервер для captive portal
             startDNSServer();
-            
+
             return true;
         } else {
             Serial.println("WiFi: Failed to start AP");
@@ -186,37 +185,35 @@ public:
      * @param password Пароль (минимум 8 символов)
      * @return true если успешно
      */
-    bool enableAP(const char* ssid, const char* password = "") {
+    bool enableAP(const char *ssid, const char *password = "") {
         return enableAP(APConfig(ssid, password));
     }
 
     /**
      * @brief Выключить режим точки доступа
-     * @return true если успешно
      */
-    bool disableAP() {
+    void disableAP() {
         if (!apModeEnabled) {
-            return true;
+            return;
         }
 
         Serial.println("WiFi: Disabling AP mode...");
-        
+
         // Останавливаем DNS сервер
         stopDNSServer();
 
         // Возвращаемся в режим STA если были подключены
         if (status == WiFiStatus::CONNECTED) {
-            WiFi.mode(WIFI_STA);
+            WiFiClass::mode(WIFI_STA);
             currentMode = WiFiMode::STA;
         } else {
-            WiFi.mode(WIFI_OFF);
+            WiFiClass::mode(WIFI_OFF);
             currentMode = WiFiMode::OFF;
         }
 
         apModeEnabled = false;
         apIpAddress = INADDR_NONE;
         Serial.println("WiFi: AP mode disabled");
-        return true;
     }
 
     /**
@@ -226,11 +223,11 @@ public:
         if (dnsServer == nullptr) {
             dnsServer = std::unique_ptr<DNSServer>(new DNSServer());
         }
-        
+
         // Перенаправляем все запросы на наш IP (captive portal)
         dnsServer->setErrorReplyCode(DNSReplyCode::NoError);
         dnsServer->start(dnsPort, "*", apIpAddress);
-        
+
         Serial.println("WiFi: DNS server started for captive portal");
     }
 
@@ -278,7 +275,7 @@ public:
 
         // Ждём подключения
         unsigned long startTime = millis();
-        while (WiFi.status() != WL_CONNECTED) {
+        while (WiFiClass::status() != WL_CONNECTED) {
             delay(500);
             Serial.print(".");
 
@@ -290,7 +287,7 @@ public:
             }
 
             // Проверка на ошибку
-            if (WiFi.status() == WL_CONNECT_FAILED) {
+            if (WiFiClass::status() == WL_CONNECT_FAILED) {
                 Serial.println("\nWiFi: Connection failed");
                 status = WiFiStatus::FAILED;
                 return false;
@@ -324,19 +321,19 @@ public:
      * @return true если подключены
      */
     bool isConnected() {
-        if (WiFi.status() != WL_CONNECTED) {
+        if (WiFiClass::status() != WL_CONNECTED) {
             if (status == WiFiStatus::CONNECTED) {
                 status = WiFiStatus::LOST_CONNECTION;
                 Serial.println("WiFi: Connection lost");
             }
             return false;
         }
-        
+
         // Обновляем IP если был потерян
-        if (ipAddress == INADDR_NONE && WiFi.status() == WL_CONNECTED) {
+        if (ipAddress == INADDR_NONE && WiFiClass::status() == WL_CONNECTED) {
             ipAddress = WiFi.localIP();
         }
-        
+
         return true;
     }
 
@@ -396,7 +393,7 @@ public:
      * @brief Получить MAC адрес
      * @return Строка с MAC адресом
      */
-    String getMACAddress() const {
+    static String getMACAddress() {
         return WiFi.macAddress();
     }
 
@@ -451,7 +448,7 @@ public:
      * @param ssid SSID сети
      * @param password Пароль
      */
-    void setCredentials(const char* ssid, const char* password) {
+    void setCredentials(const char *ssid, const char *password) {
         staConfig.ssid = ssid;
         staConfig.password = password;
         Serial.print("WiFi: Credentials updated. SSID: ");
@@ -497,12 +494,12 @@ public:
     /**
      * @brief Получить конфигурацию STA
      */
-    const WiFiConfig& getSTAConfig() const { return staConfig; }
+    const WiFiConfig &getSTAConfig() const { return staConfig; }
 
     /**
      * @brief Получить конфигурацию AP
      */
-    const APConfig& getAPConfig() const { return apConfig; }
+    const APConfig &getAPConfig() const { return apConfig; }
 
     /**
      * @brief Обработка процесса переподключения (вызывать в loop)
@@ -516,7 +513,7 @@ public:
         // Обработка DNS запросов если AP включён
         handleDNSServer();
 
-        if (WiFi.status() == WL_CONNECTED) {
+        if (WiFiClass::status() == WL_CONNECTED) {
             // Успешное подключение
             ipAddress = WiFi.localIP();
             status = WiFiStatus::CONNECTED;
@@ -535,7 +532,7 @@ public:
         }
 
         // Проверка на ошибку
-        if (WiFi.status() == WL_CONNECT_FAILED) {
+        if (WiFiClass::status() == WL_CONNECT_FAILED) {
             Serial.println("\nWiFi: Reconnection failed");
             status = WiFiStatus::FAILED;
             return false;
@@ -560,7 +557,7 @@ public:
      * @brief Установить callback изменения статуса
      * @param callback Функция обратного вызова
      */
-    void setStatusCallback(std::function<void(WiFiStatus)> callback) {
+    void setStatusCallback(const std::function<void(WiFiStatus)> &callback) {
         statusCallback = callback;
     }
 
