@@ -65,9 +65,8 @@ WiFiManager wifi(wifiConfig);
 BanyaWebServer webServer;
 
 // OTA
-OTAConfig otaConfig("banya-controller", 3232, nullptr, false);
 LCDOTAPresenter otaPresenter(&lcd);
-OTAManager ota(otaConfig, &otaPresenter);
+OTAManager ota(OTAConfig("banya-controller", 3232, nullptr, false), &otaPresenter);
 
 TouchSensor touch(TouchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, TOUCH_LONG_PRESS_MS,
                               TOUCH_VERY_LONG_PRESS_MS));
@@ -215,6 +214,7 @@ void setup() {
     }
 
     // Инициализация WiFi
+    Serial.print("Initializing WiFi... ");
     if (wifi.begin()) {
         Serial.println("OK");
     } else {
@@ -239,10 +239,7 @@ void setup() {
         Serial.print("Initializing OTA... ");
         if (ota.begin()) {
             Serial.println("OK");
-            Serial.print("OTA: Hostname: ");
-            Serial.println(otaConfig.hostname);
-            Serial.print("OTA: Port: ");
-            Serial.println(otaConfig.port);
+            Serial.println(ota.getInfo());
         } else {
             Serial.println("FAILED");
         }
@@ -259,8 +256,7 @@ void setup() {
     webServer.start();
 
     if (wifiConnected) {
-        String ip = wifi.getIPAddressString();
-        Serial.println("WebServer: Started on http://" + ip);
+        Serial.printf("WebServer: Started on http://%s:%u\n", wifi.getIPAddressString().c_str(), webServer.getConfig().port);
     } else {
         Serial.println("WiFi: Failed to connect");
         lcd.setCursor(0, 3);
@@ -296,16 +292,12 @@ void setup() {
     wifiSetupIdx = pageManager.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
     pageManager.addPage(std::unique_ptr<DisplayPage>(new SystemStatusPage(&wifi, "System Status")));
 
-    Serial.print("Pages created: ");
-    Serial.println(pageManager.getPageCount());
-
     // Установка начальной страницы
     pageManager.goToPage(0);
     pageManager.render();
 
-    Serial.println("\nWeb Interface: http://" + wifi.getIPAddressString());
-    Serial.println("Touch sensor: " + touch.getPinName() + " (for page switching)");
-    Serial.println("WiFi Settings: " + wifiSettings.getInfo());
+    Serial.print("Pages created: ");
+    Serial.println(pageManager.getPageCount());
 }
 
 IntervalTimer lcdTimer(5000); // 5 секунд

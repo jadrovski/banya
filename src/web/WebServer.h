@@ -118,7 +118,6 @@ public:
     void start() {
         if (server) {
             server->begin();
-            Serial.println("WebServer: Started on port " + String(config.port));
         }
     }
 
@@ -194,6 +193,12 @@ public:
      * @brief Проверка работает ли сервер
      */
     bool isRunning() const { return running; }
+
+    /**
+     * @brief Получить конфигурацию веб-сервера
+     * @return Конфигурация веб-сервера
+     */
+    const WebServerConfig& getConfig() const { return config; }
 
 private:
     /**
