@@ -24,20 +24,12 @@ public:
      * @brief Конструктор PageManager
      * @param display Ссылка на LCD дисплей
      */
-    explicit PageManager(LCD2004* display = nullptr)
+    explicit PageManager(LCD2004& display)
         : currentPageIndex(0),
-          lcd(display),
+          lcd(&display),
           autoPageSwitch(false),
           lastPageSwitchTime(0),
           pageSwitchInterval(0) {}
-
-    /**
-     * @brief Инициализация менеджера
-     * @param display Ссылка на LCD дисплей
-     */
-    void begin(LCD2004* display) {
-        lcd = display;
-    }
 
     /**
      * @brief Добавить страницу

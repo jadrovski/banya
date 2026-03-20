@@ -101,7 +101,7 @@ TouchConfig touchConfig(
 TouchSensor touch(touchConfig);
 
 // Менеджер страниц
-PageManager pageMgr;
+PageManager pageMgr(lcd);
 
 // ============================================================================
 // Функции LCD
@@ -443,8 +443,6 @@ void setup() {
     pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiInfoPage(&wifi, "WiFi Info")));
     pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
     pageMgr.addPage(std::unique_ptr<DisplayPage>(new SystemStatusPage(&wifi, "System Status")));
-
-    pageMgr.begin(&lcd);
 
     Serial.print("Pages created: ");
     Serial.println(pageMgr.getPageCount());
