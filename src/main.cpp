@@ -11,6 +11,7 @@
 #include "pages/page/WiFiSetupPage.h"
 #include "pages/PageManager.h"
 #include "web/WebServer.h"
+#include "hal/Button.h"
 
 // I2C конфигурация
 constexpr uint8_t I2C_SDA_PIN = 21;
@@ -48,6 +49,12 @@ constexpr uint32_t TOUCH_DEBOUNCE_MS = 50;
 constexpr uint32_t TOUCH_LONG_PRESS_MS = 1000;
 constexpr uint32_t TOUCH_VERY_LONG_PRESS_MS = 5000;
 
+// Button конфигурация (GPIO15)
+constexpr uint8_t BUTTON_PIN = 15;
+constexpr uint32_t BUTTON_DEBOUNCE_MS = 50;
+constexpr uint32_t BUTTON_LONG_PRESS_MS = 1000;
+constexpr uint32_t BUTTON_VERY_LONG_PRESS_MS = 5000;
+
 // Глобальные объекты HAL
 I2CBus mainBus(I2CBusConfig(&Wire, I2C_SDA_PIN, I2C_SCL_PIN, I2C_SPEED)); // NOLINT(*-interfaces-global-init)
 
@@ -75,8 +82,10 @@ Status getStatus();
 
 BanyaWebServer webServer(WebServerConfig(), getStatus, &ledStrip, &wifi, &wifiSettings, &lcd, &ota);
 
-TouchSensor touch(TouchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, TOUCH_LONG_PRESS_MS,
-                              TOUCH_VERY_LONG_PRESS_MS));
+// TouchSensor touch(TouchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, TOUCH_LONG_PRESS_MS,
+//                               TOUCH_VERY_LONG_PRESS_MS));
+
+Button button(ButtonConfig(BUTTON_PIN, true, BUTTON_DEBOUNCE_MS, BUTTON_LONG_PRESS_MS, BUTTON_VERY_LONG_PRESS_MS));
 
 PageManager pageManager(lcd);
 
@@ -145,6 +154,39 @@ void handleTouchCallback(TouchEvent event) {
             break;
 
         case TouchEvent::TAP:
+            pageManager.nextPage();
+            break;
+
+        default:
+            break;
+    }
+}
+
+/**
+ * @brief Callback для обработки событий Button
+ */
+void handleButtonCallback(ButtonEvent event) {
+    switch (event) {
+        case ButtonEvent::LONG_PRESS:
+            wifi.reconnect();
+            break;
+
+        case ButtonEvent::VERY_LONG_PRESS:
+            // Enter WiFi Setup Mode
+            Serial.println("Button: Very-long press - Entering WiFi Setup Mode...");
+
+            if (!wifi.isAPEnabled()) {
+                wifi.enableAP();
+            } else {
+                wifi.disableAP();
+            }
+
+            // Переходим на страницу настройки WiFi
+            pageManager.goToPage(wifiSetupIdx);
+            pageManager.render();
+            break;
+
+        case ButtonEvent::TAP:
             pageManager.nextPage();
             break;
 
@@ -283,18 +325,30 @@ void setupWebServer() {
     }
 }
 
-void setupTouch() {
-    // Инициализация Touch сенсора
-    Serial.print("Initializing Touch... ");
-    if (touch.begin()) {
-        Serial.println("OK");
-        Serial.print("Touch: Baseline = ");
-        Serial.println(touch.getBaselineValue());
-        Serial.print("Touch: Threshold = ");
-        Serial.println(touch.getThreshold());
+// void setupTouch() {
+//     // Инициализация Touch сенсора
+//     Serial.print("Initializing Touch... ");
+//     if (touch.begin()) {
+//         Serial.println("OK");
+//         Serial.print("Touch: Baseline = ");
+//         Serial.println(touch.getBaselineValue());
+//         Serial.print("Touch: Threshold = ");
+//         Serial.println(touch.getThreshold());
+//
+//         // Установка callback для обработки long press событий
+//         touch.setCallback(handleTouchCallback);
+//     } else {
+//         Serial.println("FAILED");
+//     }
+// }
 
-        // Установка callback для обработки long press событий
-        touch.setCallback(handleTouchCallback);
+void setupButton() {
+    // Инициализация Button
+    Serial.print("Initializing Button... ");
+    if (button.begin()) {
+        Serial.println("OK");
+        // Установка callback для обработки событий
+        button.setCallback(handleButtonCallback);
     } else {
         Serial.println("FAILED");
     }
@@ -330,7 +384,8 @@ void setup() {
     setupWifi();
     setupOTA();
     setupWebServer();
-    setupTouch();
+    // setupTouch();
+    setupButton();
     setupPageManager();
 }
 
@@ -350,7 +405,10 @@ void loop() {
     ota.handleLoop();
 
     // Обработка Touch событий (tap, long press, very-long press)
-    touch.handleLoop();
+    // touch.handleLoop();
+
+    // Обработка Button событий (tap, long press, very-long press)
+    button.handleLoop();
 
     pageManager.handleLoop();
 
