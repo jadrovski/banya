@@ -80,6 +80,13 @@ TemperatureRangeColor tempColor(25.0f);
 // Mock temperature sensor (for web testing)
 float mockTemperature = -1.0f; // -1 means disabled (use real sensor)
 
+// Serial temperature control
+bool serialTempControl = false;
+float serialTempValue = 25.0f;
+const float TEMP_STEP = 0.5f;
+const float TEMP_MIN = -10.0f;
+const float TEMP_MAX = 100.0f;
+
 // OTA
 LCDOTAPresenter otaPresenter(&lcd);
 OTAManager ota(OTAConfig("banya-controller", 3232, nullptr, false), &otaPresenter);
@@ -98,6 +105,136 @@ PageManager pageManager(lcd);
 
 // Индекс страницы WiFi Setup (используется в callback)
 uint8_t wifiSetupIdx = -1;
+
+/**
+ * @brief Handle serial commands for temperature control
+ * Commands:
+ * - 'w' or 'W': Increase temperature
+ * - 's' or 'S': Decrease temperature
+ * - 'r' or 'R': Reset to real sensor (disable mock)
+ * - 'm' or 'M': Enable mock temperature control
+ * - '0'-'9': Set specific temperature
+ */
+void handleSerialTempControl() {
+    if (Serial.available()) {
+        char cmd = Serial.read();
+        
+        switch (cmd) {
+            case 'w':
+            case 'W':
+            case '+':
+            case 'u':  // up
+            case 'U':
+                serialTempValue = min(serialTempValue + TEMP_STEP, TEMP_MAX);
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C (+)\n", serialTempValue);
+                break;
+                
+            case 's':
+            case 'S':
+            case '-':
+            case 'd':  // down
+            case 'D':
+                serialTempValue = max(serialTempValue - TEMP_STEP, TEMP_MIN);
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C (-)\n", serialTempValue);
+                break;
+                
+            case 'r':
+            case 'R':
+                mockTemperature = -1.0f;
+                serialTempControl = false;
+                Serial.println("Using real sensor");
+                break;
+                
+            case 'm':
+            case 'M':
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Mock temp enabled: %.1f°C\n", serialTempValue);
+                break;
+                
+            case '0':
+                serialTempValue = 0.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '1':
+                serialTempValue = 10.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '2':
+                serialTempValue = 20.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '3':
+                serialTempValue = 30.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '4':
+                serialTempValue = 40.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '5':
+                serialTempValue = 50.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '6':
+                serialTempValue = 60.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '7':
+                serialTempValue = 70.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '8':
+                serialTempValue = 80.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            case '9':
+                serialTempValue = 90.0f;
+                mockTemperature = serialTempValue;
+                serialTempControl = true;
+                Serial.printf("Temp: %.1f°C\n", serialTempValue);
+                break;
+            
+            case '?':
+            case 'h':
+            case 'H':
+                Serial.println("\n=== Temperature Control ===");
+                Serial.println("w/u/+ : Increase temperature (+0.5°C)");
+                Serial.println("s/d/- : Decrease temperature (-0.5°C)");
+                Serial.println("0-9   : Set temperature (0=0°C, 5=50°C, etc.)");
+                Serial.println("m     : Enable mock temperature");
+                Serial.println("r     : Use real sensor");
+                Serial.println("?/h   : Show this help");
+                Serial.println("=========================\n");
+                break;
+                
+            default:
+                break;
+        }
+    }
+}
 
 void displayWelcome() {
     lcd.setCursor(8, 1);
@@ -250,7 +387,7 @@ void setupLEDStrip() {
     Serial.print("Initializing RGB LED... ");
     if (ledStrip.begin()) {
         Serial.println("OK");
-        ledStrip.setBrightness(0.5);
+        ledStrip.setBrightness(0.2);
         ledStrip.enableGamma(true);
     } else {
         Serial.println("FAILED");
@@ -399,14 +536,36 @@ void setup() {
 IntervalTimer lcdConnectionTimer(5000); // 5 секунд
 
 void loop() {
+    // Handle serial temperature control commands
+    handleSerialTempControl();
+    
     // Автоматическое обновление температур DS18B20
     ds18b20.handleLoop();
 
     // Update LED strip color based on temperature (use first sensor or mock)
     float temp = mockTemperature >= 0 ? mockTemperature : ds18b20.getTemperature(0);
-    if (temp != DEVICE_DISCONNECTED_C && temp >= 0) {
-        RGB color = tempColor.updateTemperature(temp);
-        ledStrip.setColor(color);
+    
+    if (temp != DEVICE_DISCONNECTED_C) {
+        // Update temperature and check if color changed (needs fade)
+        tempColor.updateTemperature(temp);
+
+        // Debug output
+        static unsigned long lastDebug = 0;
+        if (millis() - lastDebug > 5000) {
+            RGB color = tempColor.getDisplayedColor();
+            Serial.printf("Temp: %.1f°C Range: %u Color: R=%u G=%u B=%u Fade: %s\n",
+                temp, tempColor.getCurrentRangeIndex(),
+                color.red, color.green, color.blue,
+                tempColor.isFadingActive() ? "yes" : "no");
+            lastDebug = millis();
+        }
+
+        // Run blocking fade animation if color changed
+        if (tempColor.isFadingActive()) {
+            tempColor.runBlockingFade(&ledStrip);
+        }
+    } else {
+        Serial.printf("Temperature sensor disconnected! Temp reading: %.1f\n", temp);
     }
 
     // Обработка веб-клиентов

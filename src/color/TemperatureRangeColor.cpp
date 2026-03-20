@@ -21,15 +21,86 @@ const TempThreshold thresholds[7] = {
     {86,  84, 255, 0, 0}       // Range 6: Red
 };
 
+RGB TemperatureRangeColor::getBlendedColor(uint8_t rangeIndex1, uint8_t rangeIndex2, float blend) {
+    blend = constrain(blend, 0.0f, 1.0f);
+    RGB color1 = getColorForRange(rangeIndex1);
+    RGB color2 = getColorForRange(rangeIndex2);
+    return color1.blend(color2, blend);
+}
+
 RGB TemperatureRangeColor::updateTemperature(float temperature) {
     // Only update direction if change is significant (>0.1°C)
     if (abs(temperature - lastTemperature) > 0.1f) {
         isIncreasing = temperature > lastTemperature;
-    }
-    lastTemperature = temperature;
+        lastTemperature = temperature;
+        updateRange(temperature);
 
-    updateRange(temperature);
-    return getCurrentColor();
+        // Update target color based on new temperature
+        targetColor = getCurrentColor();
+
+        // Start fade animation if color changed
+        if (!displayedColor.operator==(targetColor)) {
+            isFading = true;
+            fadeStartTime = millis();
+        }
+    }
+
+    return updateDisplayedColor();
+}
+
+RGB TemperatureRangeColor::updateDisplayedColor() {
+    if (!isFading) {
+        displayedColor = targetColor;
+        return displayedColor;
+    }
+
+    unsigned long elapsed = millis() - fadeStartTime;
+    float progress = (float)elapsed / FADE_DURATION_MS;
+
+    if (progress >= 1.0f) {
+        // Fade complete
+        displayedColor = targetColor;
+        isFading = false;
+    } else {
+        // Apply smooth easing (ease-in-out)
+        float easedProgress = progress < 0.5f
+            ? 2.0f * progress * progress
+            : 1.0f - pow(-2.0f * progress + 2.0f, 2.0f) / 2.0f;
+
+        displayedColor = displayedColor.blend(targetColor, easedProgress);
+    }
+
+    return displayedColor;
+}
+
+void TemperatureRangeColor::runBlockingFade(RGBLED* ledStrip) {
+    if (!isFading) return;
+
+    unsigned long startTime = millis();
+    RGB startColor = displayedColor;
+
+    while (true) {
+        unsigned long elapsed = millis() - startTime;
+        float progress = (float)elapsed / FADE_DURATION_MS;
+
+        if (progress >= 1.0f) {
+            displayedColor = targetColor;
+            isFading = false;
+            ledStrip->setColor(targetColor);
+            break;
+        }
+
+        // Apply smooth easing (ease-in-out)
+        float easedProgress = progress < 0.5f
+            ? 2.0f * progress * progress
+            : 1.0f - pow(-2.0f * progress + 2.0f, 2.0f) / 2.0f;
+
+        displayedColor = startColor.blend(targetColor, easedProgress);
+        ledStrip->setColor(displayedColor);
+
+        // Small delay for smooth animation (~20ms = ~50 FPS)
+        delay(20);
+    }
 }
 
 RGB TemperatureRangeColor::getCurrentColor() const {
@@ -48,18 +119,19 @@ void TemperatureRangeColor::updateRange(float temperature) {
     // Handle negative temperatures - range 0
     if (temperature < 0) {
         currentRangeIndex = 0;
+        transitionBlend = 0.0f;
         return;
     }
 
     // Handle temperatures above max range (86°C+)
     if (temperature >= thresholds[NUM_RANGES - 1].heatTo) {
         currentRangeIndex = NUM_RANGES - 1;
+        transitionBlend = 1.0f;
         return;
     }
 
     if (isIncreasing) {
         // Heating: find range where temp >= heatTo threshold
-        // Start from current range and move up
         for (uint8_t i = currentRangeIndex + 1; i < NUM_RANGES; i++) {
             if (temperature >= thresholds[i].heatTo) {
                 currentRangeIndex = i;
@@ -67,9 +139,9 @@ void TemperatureRangeColor::updateRange(float temperature) {
                 break;
             }
         }
+        transitionBlend = 0.0f;  // Not used for time-based fading
     } else {
-        // Cooling: check if temp dropped below current range's coolTo threshold
-        // Move down to the appropriate range
+        // Cooling: find range based on coolTo thresholds
         for (int8_t i = currentRangeIndex - 1; i >= 0; i--) {
             if (temperature <= thresholds[i + 1].coolTo) {
                 currentRangeIndex = i;
@@ -77,13 +149,14 @@ void TemperatureRangeColor::updateRange(float temperature) {
                 break;
             }
         }
+        transitionBlend = 0.0f;  // Not used for time-based fading
     }
 }
 
 String TemperatureRangeColor::toString() const {
-    char buffer[64];
-    RGB color = getCurrentColor();
-    snprintf(buffer, sizeof(buffer), "TempRange[%u]: RGB(%u,%u,%u)",
-             currentRangeIndex, color.red, color.green, color.blue);
+    char buffer[80];
+    RGB color = getDisplayedColor();
+    snprintf(buffer, sizeof(buffer), "TempRange[%u] Fade[%s]: RGB(%u,%u,%u)",
+             currentRangeIndex, isFading ? "yes" : "no", color.red, color.green, color.blue);
     return String(buffer);
 }

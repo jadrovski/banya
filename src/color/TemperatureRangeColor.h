@@ -4,6 +4,7 @@
 #include "RGB.h"
 #include "HSV.h"
 #include "HSL.h"
+#include "../hal/RGBLED.h"
 
 /**
  * @brief Temperature range with hysteresis
@@ -21,42 +22,69 @@ struct TemperatureRange {
 
 /**
  * @brief Temperature-based LED color controller with hysteresis
- * 
+ *
  * Maps temperature ranges to specific colors with hysteresis to prevent
  * rapid color changes near threshold boundaries.
+ * 
+ * Features smooth color transitions between adjacent ranges by interpolating
+ * colors when temperature is within a transition zone near thresholds.
+ * Uses time-based fading for smooth visual transitions.
  */
 class TemperatureRangeColor : public Color {
 public:
     static const uint8_t NUM_RANGES = 7;
+    static const uint32_t FADE_DURATION_MS = 5000;  // Fade duration in milliseconds (5 seconds)
 
 private:
     uint8_t currentRangeIndex;
     float lastTemperature;
     bool isIncreasing;
+    float transitionBlend;  // Kept for API compatibility (not used for time-based fading)
+    
+    // Time-based fading
+    RGB targetColor;
+    RGB displayedColor;
+    unsigned long fadeStartTime;
+    bool isFading;
 
 public:
     /**
      * @brief Constructor
      * @param initialTemp Initial temperature value
      */
-    TemperatureRangeColor(float initialTemp = 25.0f) 
-        : currentRangeIndex(0), lastTemperature(initialTemp), isIncreasing(true) {
+    TemperatureRangeColor(float initialTemp = 25.0f)
+        : currentRangeIndex(0), lastTemperature(initialTemp), isIncreasing(true), transitionBlend(0.0f),
+          targetColor(0, 0, 255), displayedColor(0, 0, 255), fadeStartTime(0), isFading(false) {
         // Determine initial range based on temperature
         updateRange(initialTemp);
+        targetColor = getColorForRange(currentRangeIndex);
+        displayedColor = targetColor;
     }
 
     /**
      * @brief Update temperature and get corresponding color
      * @param temperature Current temperature in °C
-     * @return RGB color for current temperature
+     * @return RGB color for current temperature (with smooth transition if applicable)
      */
     RGB updateTemperature(float temperature);
 
     /**
+     * @brief Update the displayed color based on fade progress
+     * @return Current displayed RGB color (after applying fade)
+     */
+    RGB updateDisplayedColor();
+
+    /**
      * @brief Get color for current temperature without updating
-     * @return Current RGB color
+     * @return Current target RGB color (may differ from displayed during fade)
      */
     RGB getCurrentColor() const;
+
+    /**
+     * @brief Get the currently displayed color (after fade applied)
+     * @return Displayed RGB color
+     */
+    RGB getDisplayedColor() const { return displayedColor; }
 
     /**
      * @brief Get current temperature range index (0-5)
@@ -71,11 +99,39 @@ public:
     bool getTrend() const { return isIncreasing; }
 
     /**
+     * @brief Get the transition blend factor (0.0-1.0)
+     * @return 0.0 = fully in current range, 1.0 = transitioning to next range
+     */
+    float getTransitionBlend() const { return transitionBlend; }
+
+    /**
+     * @brief Check if currently fading
+     * @return true if fade animation is in progress
+     */
+    bool isFadingActive() const { return isFading; }
+
+    /**
+     * @brief Run blocking fade animation to target color
+     * @param ledStrip Pointer to RGBLED instance to update during fade
+     * @note This function blocks until fade is complete (FADE_DURATION_MS)
+     */
+    void runBlockingFade(RGBLED* ledStrip);
+
+    /**
      * @brief Get the RGB color for a specific range
      * @param rangeIndex Range index (0-5)
      * @return RGB color
      */
     static RGB getColorForRange(uint8_t rangeIndex);
+
+    /**
+     * @brief Get smoothly interpolated color between two ranges
+     * @param rangeIndex1 First range index
+     * @param rangeIndex2 Second range index
+     * @param blend Blend factor (0.0 = range1, 1.0 = range2)
+     * @return Interpolated RGB color
+     */
+    static RGB getBlendedColor(uint8_t rangeIndex1, uint8_t rangeIndex2, float blend);
 
     // Color interface implementation
     RGB toRGB() const override { return getCurrentColor(); }
