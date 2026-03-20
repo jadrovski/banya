@@ -117,6 +117,11 @@ public:
         server->on("/i2c/reset", std::bind(&BanyaWebServer::handleI2CReset, this));
         server->on("/lcd/reboot", std::bind(&BanyaWebServer::handleLCDReboot, this));
 
+        // Temperature mock endpoints
+        server->on("/temp-mock", std::bind(&BanyaWebServer::handleTempMockPage, this));
+        server->on("/temp-mock/set", std::bind(&BanyaWebServer::handleTempMockSet, this));
+        server->on("/temp-mock/disable", std::bind(&BanyaWebServer::handleTempMockDisable, this));
+
         server->onNotFound(std::bind(&BanyaWebServer::handleNotFound, this));
 
         running = true;
@@ -497,6 +502,46 @@ private:
     }
 
     /**
+     * @brief Обработка страницы эмуляции температуры
+     */
+    void handleTempMockPage() {
+        String html = getTempMockPageHTML();
+        server->send(200, "text/html", html);
+    }
+
+    /**
+     * @brief Обработка установки эмуляции температуры
+     */
+    void handleTempMockSet() {
+        if (server->hasArg("temperature")) {
+            float temp = server->arg("temperature").toFloat();
+            // Clamp temperature to reasonable range
+            if (temp < -55.0f) temp = -55.0f;
+            if (temp > 125.0f) temp = 125.0f;
+            
+            // Update mock temperature (external variable from main.cpp)
+            extern float mockTemperature;
+            mockTemperature = temp;
+            
+            Serial.printf("Temp Mock: Set to %.1f°C\n", temp);
+            server->send(200, "application/json", 
+                         "{\"success\":true,\"temperature\":" + String(temp, 1) + "}");
+        } else {
+            server->send(400, "application/json", "{\"error\":\"Missing temperature parameter\"}");
+        }
+    }
+
+    /**
+     * @brief Обработка отключения эмуляции температуры
+     */
+    void handleTempMockDisable() {
+        extern float mockTemperature;
+        mockTemperature = -1.0f;
+        Serial.println("Temp Mock: Disabled - using real sensor");
+        server->send(200, "application/json", "{\"success\":true,\"message\":\"Using real sensor\"}");
+    }
+
+    /**
      * @brief Обработка включения AP режима
      */
     void handleEnableAP() {
@@ -632,6 +677,10 @@ private:
                 <span class="btn-icon">🖥️</span>
                 <span>Reboot LCD</span>
             </button>
+            <button id="temp-mock-btn" class="reboot-btn" onclick="openTempMock()">
+                <span class="btn-icon">🌡️</span>
+                <span>Temp Mock</span>
+            </button>
         </div>
 
         <div class="footer">
@@ -694,6 +743,10 @@ private:
                         alert('Failed to reboot LCD');
                     });
             }
+        }
+
+        function openTempMock() {
+            window.location.href = '/temp-mock';
         }
     </script>
     
@@ -1941,6 +1994,383 @@ h1 {
         // Загрузка статуса при старте
         window.onload = function() {
             loadAPStatus();
+        };
+    </script>
+</body>
+</html>
+)rawliteral";
+        return html;
+    }
+
+    /**
+     * @brief Генерация HTML страницы эмуляции температуры
+     */
+    String getTempMockPageHTML() {
+        String html = R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Mock - Banya Controller</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .mock-controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .temperature-display {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border: 2px solid rgba(0, 217, 255, 0.3);
+        }
+
+        .temperature-value {
+            font-size: 4em;
+            font-weight: bold;
+            color: #00d9ff;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+
+        .temperature-unit {
+            font-size: 1.5em;
+            color: #888;
+        }
+
+        .slider-group {
+            margin-bottom: 25px;
+        }
+
+        .slider-group label {
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #00d9ff;
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            background: linear-gradient(135deg, #ff3232, #ff9900);
+            box-shadow: 0 0 15px rgba(255, 102, 0, 0.5);
+        }
+
+        .slider-value {
+            text-align: right;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 5px;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .preset-btn {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .preset-btn:hover {
+            background: rgba(0, 217, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .preset-btn:active {
+            transform: translateY(0);
+        }
+
+        .disable-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #666, #444);
+            color: #fff;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+        }
+
+        .disable-btn:hover {
+            background: linear-gradient(135deg, #555, #333);
+            transform: translateY(-2px);
+        }
+
+        .status-indicator {
+            text-align: center;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .status-indicator.active {
+            background: rgba(0, 255, 100, 0.2);
+            color: #00ff64;
+            border: 1px solid rgba(0, 255, 100, 0.3);
+        }
+
+        .status-indicator.disabled {
+            background: rgba(255, 50, 50, 0.2);
+            color: #ff3232;
+            border: 1px solid rgba(255, 50, 50, 0.3);
+        }
+
+        .color-info {
+            text-align: center;
+            padding: 15px;
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .color-preview {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .top-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #fff;
+            border-radius: 8px;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item:hover {
+            background: rgba(0, 217, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .nav-icon {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .nav-text {
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌡️ Temperature Mock</h1>
+
+        <nav class="top-nav">
+            <a href="/" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="/led" class="nav-item">
+                <span class="nav-icon">🎨</span>
+                <span class="nav-text">LED</span>
+            </a>
+            <a href="/wifi" class="nav-item">
+                <span class="nav-icon">📶</span>
+                <span class="nav-text">WiFi</span>
+            </a>
+        </nav>
+
+        <div class="mock-controls">
+            <div class="temperature-display">
+                <div class="temperature-value" id="tempValue">--.-</div>
+                <div class="temperature-unit">°C</div>
+            </div>
+
+            <div class="status-indicator active" id="statusIndicator">
+                ✓ Mock Mode Active
+            </div>
+
+            <div class="color-info">
+                <span class="color-preview" id="colorPreview"></span>
+                <span id="colorName">--</span>
+            </div>
+
+            <div class="slider-group">
+                <label>Temperature: <span id="tempSliderValue">--</span>°C</label>
+                <input type="range" id="tempSlider" min="0" max="86" value="25" step="0.5">
+            </div>
+
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="setTemp(0)">0°C</button>
+                <button class="preset-btn" onclick="setTemp(25)">25°C</button>
+                <button class="preset-btn" onclick="setTemp(35)">35°C</button>
+                <button class="preset-btn" onclick="setTemp(55)">55°C</button>
+                <button class="preset-btn" onclick="setTemp(62)">62°C</button>
+                <button class="preset-btn" onclick="setTemp(68)">68°C</button>
+                <button class="preset-btn" onclick="setTemp(71)">71°C</button>
+                <button class="preset-btn" onclick="setTemp(86)">86°C</button>
+            </div>
+
+            <button class="disable-btn" onclick="disableMock()">
+                ⏹️ Disable Mock (Use Real Sensor)
+            </button>
+        </div>
+
+        <div class="footer">
+            <p id="message"></p>
+        </div>
+    </div>
+
+    <script>
+        let mockActive = true;
+
+        // Temperature ranges and colors (matching TemperatureRangeColor.cpp)
+        const colorRanges = [
+            { max: 35, color: '#FF00FF', name: 'Magenta (0-35°C)' },
+            { max: 55, color: '#0000FF', name: 'Blue (35-55°C)' },
+            { max: 62, color: '#FFBEA0', name: 'Light Orange (55-62°C)' },
+            { max: 68, color: '#FFBE00', name: 'Orange (62-68°C)' },
+            { max: 74, color: '#00FF00', name: 'Green (68-74°C)' },
+            { max: 80, color: '#00FFFF', name: 'Aqua (74-80°C)' },
+            { max: 86, color: '#FF0000', name: 'Red (80-86°C)' }
+        ];
+
+        function getColorForTemp(temp) {
+            for (let range of colorRanges) {
+                if (temp <= range.max) {
+                    return range;
+                }
+            }
+            return colorRanges[colorRanges.length - 1];
+        }
+
+        function updateDisplay(temp) {
+            document.getElementById('tempValue').textContent = temp.toFixed(1);
+            document.getElementById('tempSliderValue').textContent = temp.toFixed(1);
+            
+            const colorInfo = getColorForTemp(temp);
+            document.getElementById('colorPreview').style.backgroundColor = colorInfo.color;
+            document.getElementById('colorName').textContent = colorInfo.name;
+        }
+
+        function setTemp(temp) {
+            document.getElementById('tempSlider').value = temp;
+            updateDisplay(parseFloat(temp));
+            sendTemperature(temp);
+        }
+
+        function sendTemperature(temp) {
+            fetch('/temp-mock/set?temperature=' + temp)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mockActive = true;
+                        updateStatus();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function disableMock() {
+            fetch('/temp-mock/disable')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mockActive = false;
+                        document.getElementById('statusIndicator').className = 'status-indicator disabled';
+                        document.getElementById('statusIndicator').textContent = '⏹️ Using Real Sensor';
+                        document.getElementById('tempValue').textContent = '--.-';
+                        document.getElementById('colorPreview').style.backgroundColor = 'transparent';
+                        document.getElementById('colorName').textContent = 'Waiting for sensor...';
+                        document.getElementById('message').textContent = 'Mock disabled - using DS18B20 sensor';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function updateStatus() {
+            if (mockActive) {
+                document.getElementById('statusIndicator').className = 'status-indicator active';
+                document.getElementById('statusIndicator').textContent = '✓ Mock Mode Active';
+            }
+        }
+
+        // Slider event listener with debounce
+        let sendTimeout;
+        document.getElementById('tempSlider').addEventListener('input', function(e) {
+            const temp = parseFloat(e.target.value);
+            updateDisplay(temp);
+            
+            // Debounce: send temperature after 100ms of no movement
+            clearTimeout(sendTimeout);
+            sendTimeout = setTimeout(() => {
+                sendTemperature(temp);
+            }, 100);
+        });
+
+        document.getElementById('tempSlider').addEventListener('change', function(e) {
+            const temp = parseFloat(e.target.value);
+            // Send immediately on release if not already sent
+            clearTimeout(sendTimeout);
+            sendTemperature(temp);
+        });
+
+        // Initialize
+        window.onload = function() {
+            const initialTemp = 25;
+            document.getElementById('tempSlider').value = initialTemp;
+            updateDisplay(initialTemp);
+            sendTemperature(initialTemp);
         };
     </script>
 </body>

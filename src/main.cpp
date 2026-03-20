@@ -12,6 +12,7 @@
 #include "pages/PageManager.h"
 #include "web/WebServer.h"
 #include "hal/Button.h"
+#include "color/TemperatureRangeColor.h"
 
 // I2C конфигурация
 constexpr uint8_t I2C_SDA_PIN = 21;
@@ -72,6 +73,12 @@ RGBLED ledStrip(
 WiFiSettings wifiSettings;
 WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
 WiFiManager wifi(wifiConfig);
+
+// Temperature-based LED color controller
+TemperatureRangeColor tempColor(25.0f);
+
+// Mock temperature sensor (for web testing)
+float mockTemperature = -1.0f; // -1 means disabled (use real sensor)
 
 // OTA
 LCDOTAPresenter otaPresenter(&lcd);
@@ -394,6 +401,13 @@ IntervalTimer lcdConnectionTimer(5000); // 5 секунд
 void loop() {
     // Автоматическое обновление температур DS18B20
     ds18b20.handleLoop();
+
+    // Update LED strip color based on temperature (use first sensor or mock)
+    float temp = mockTemperature >= 0 ? mockTemperature : ds18b20.getTemperature(0);
+    if (temp != DEVICE_DISCONNECTED_C && temp >= 0) {
+        RGB color = tempColor.updateTemperature(temp);
+        ledStrip.setColor(color);
+    }
 
     // Обработка веб-клиентов
     webServer.handleLoop();
