@@ -65,22 +65,14 @@ WiFiManager wifi(wifiConfig);
 BanyaWebServer webServer;
 
 // OTA
-OTAConfig otaConfig("banya-controller", 3232, nullptr, true, false);
+OTAConfig otaConfig("banya-controller", 3232, nullptr, false);
 LCDOTAPresenter otaPresenter(&lcd);
 OTAManager ota(otaConfig, &otaPresenter);
 
-// Touch сенсор
-TouchConfig touchConfig(
-    TOUCH_PIN,
-    TOUCH_THRESHOLD_PERCENT,
-    TOUCH_DEBOUNCE_MS,
-    TOUCH_LONG_PRESS_MS,
-    TOUCH_VERY_LONG_PRESS_MS
-);
-TouchSensor touch(touchConfig);
+TouchSensor touch(TouchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, TOUCH_LONG_PRESS_MS,
+                              TOUCH_VERY_LONG_PRESS_MS));
 
-// Менеджер страниц
-PageManager pageMgr(lcd);
+PageManager pageManager(lcd);
 
 // Индекс страницы WiFi Setup (используется в callback)
 uint8_t wifiSetupIdx = -1;
@@ -97,8 +89,8 @@ void displayWelcome() {
     delay(500);
 }
 
-BanyaStatus getBanyaStatus() {
-    BanyaStatus status;
+Status getStatus() {
+    Status status;
 
     // Температуры (DS18B20 обновляется автоматически в loop())
     status.temp1 = ds18b20.getTemperature(0);
@@ -144,12 +136,12 @@ void handleTouchCallback(TouchEvent event) {
             }
 
             // Переходим на страницу настройки WiFi
-            pageMgr.goToPage(wifiSetupIdx);
-            pageMgr.render();
+            pageManager.goToPage(wifiSetupIdx);
+            pageManager.render();
             break;
 
         case TouchEvent::TAP:
-            pageMgr.nextPage();
+            pageManager.nextPage();
             break;
 
         default:
@@ -258,7 +250,7 @@ void setup() {
 
     // Запуск веб-сервера (всегда, даже если WiFi не подключён)
     webServer.begin();
-    webServer.setStatusProvider(getBanyaStatus);
+    webServer.setStatusProvider(getStatus);
     webServer.setLEDStrip(&ledStrip);
     webServer.setWiFiManager(&wifi);
     webServer.setWiFiSettings(&wifiSettings);
@@ -297,19 +289,19 @@ void setup() {
     // Создание страниц
     Serial.println("Creating display pages...");
 
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(new DallasSensorsPage(&ds18b20, "Dallas DS18B20")));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(new BME280Page(&bme, "BME280 Sensor")));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(new LEDStripPage(&ledStrip, "LED Strip")));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiInfoPage(&wifi, "WiFi Info")));
-    wifiSetupIdx = pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(new SystemStatusPage(&wifi, "System Status")));
+    pageManager.addPage(std::unique_ptr<DisplayPage>(new DallasSensorsPage(&ds18b20, "Dallas DS18B20")));
+    pageManager.addPage(std::unique_ptr<DisplayPage>(new BME280Page(&bme, "BME280 Sensor")));
+    pageManager.addPage(std::unique_ptr<DisplayPage>(new LEDStripPage(&ledStrip, "LED Strip")));
+    pageManager.addPage(std::unique_ptr<DisplayPage>(new WiFiInfoPage(&wifi, "WiFi Info")));
+    wifiSetupIdx = pageManager.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
+    pageManager.addPage(std::unique_ptr<DisplayPage>(new SystemStatusPage(&wifi, "System Status")));
 
     Serial.print("Pages created: ");
-    Serial.println(pageMgr.getPageCount());
+    Serial.println(pageManager.getPageCount());
 
     // Установка начальной страницы
-    pageMgr.goToPage(0);
-    pageMgr.render();
+    pageManager.goToPage(0);
+    pageManager.render();
 
     Serial.println("\nWeb Interface: http://" + wifi.getIPAddressString());
     Serial.println("Touch sensor: " + touch.getPinName() + " (for page switching)");
@@ -334,7 +326,7 @@ void loop() {
     // Обработка Touch событий (tap, long press, very-long press)
     touch.handleLoop();
 
-    pageMgr.handleLoop();
+    pageManager.handleLoop();
 
     // Проверка подключения LCD (периодически)
     lcdTimer.handleLoop([] {

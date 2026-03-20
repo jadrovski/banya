@@ -33,7 +33,7 @@ bool OTAManager::begin() {
     initialized = true;
     status = OTAStatus::IDLE;
 
-    if (config.enableDebug) {
+    if (config.enableLogging) {
         Serial.println("OTA: Initialized");
         Serial.print("OTA: Hostname: ");
         Serial.println(config.hostname ? config.hostname : ArduinoOTA.getHostname().c_str());
@@ -137,7 +137,7 @@ void OTAManager::setupCallbacks() {
     // Progress callback
     ArduinoOTA.onProgress([configPtr, presenterPtr](unsigned int progress, unsigned int total) {
         uint8_t percent = (progress / (total / 100));
-        if (configPtr->enableProgress) {
+        if (configPtr->enableLogging) {
             Serial.printf("OTA: Progress: %u%%\r", percent);
         }
         if (*presenterPtr && *presenterPtr) {

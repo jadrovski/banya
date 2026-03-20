@@ -19,7 +19,7 @@ struct WebServerConfig {
 /**
  * @brief Данные статуса для веб-интерфейса
  */
-struct BanyaStatus {
+struct Status {
     float temp1; // Температура DS18B20 #1
     float temp2; // Температура DS18B20 #2
     float temp3; // Температура BME280
@@ -32,7 +32,7 @@ struct BanyaStatus {
     String otaStatus; // OTA статус
     uint8_t otaProgress; // OTA прогресс (0-100)
 
-    BanyaStatus() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
+    Status() : temp1(0), temp2(0), temp3(0), humidity(0), pressure(0),
                     sensor1Connected(false), sensor2Connected(false),
                     otaProgress(0) {
     }
@@ -51,7 +51,7 @@ class BanyaWebServer {
 private:
     WebServerConfig config;
     std::unique_ptr<WebServer> server;
-    std::function<BanyaStatus()> statusProvider;
+    std::function<Status()> statusProvider;
     RGBLED *ledStrip;
     WiFiManager *wifiManager;
     WiFiSettings *wifiSettings;
@@ -146,7 +146,7 @@ public:
      * @brief Установить провайдер статуса
      * @param provider Функция, возвращающая BanyaStatus
      */
-    void setStatusProvider(std::function<BanyaStatus()> provider) {
+    void setStatusProvider(std::function<Status()> provider) {
         statusProvider = provider;
     }
 
@@ -209,7 +209,7 @@ private:
      */
     void handleStatus() {
         if (statusProvider) {
-            BanyaStatus status = statusProvider();
+            Status status = statusProvider();
 
             String json = "{";
             json += "\"temp1\":" + String(status.temp1, 1) + ",";

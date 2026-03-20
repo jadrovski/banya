@@ -27,16 +27,14 @@ struct OTAConfig {
     const char* hostname = nullptr;     ///< OTA hostname (nullptr = use default)
     const char* password = nullptr;     ///< OTA password (nullptr = no auth)
     uint16_t port = 3232;               ///< OTA port (default: 3232)
-    bool enableProgress = true;         ///< Enable progress callbacks
-    bool enableDebug = false;           ///< Enable debug output
+    bool enableLogging = false;         ///< Enable print to serial
 
     OTAConfig(
         const char* host = nullptr,
         uint16_t p = 3232,
         const char* pass = nullptr,
-        bool progress = true,
         bool debug = false
-    ) : hostname(host), password(pass), port(p), enableProgress(progress), enableDebug(debug) {}
+    ) : hostname(host), password(pass), port(p), enableLogging(debug) {}
 };
 
 /**
