@@ -53,11 +53,14 @@ constexpr uint32_t TOUCH_VERY_LONG_PRESS_MS = 5000;
 // Глобальные объекты HAL
 // ============================================================================
 
+// I2C шина (одна для всех устройств на шине)
+I2CBusConfig i2cBusConfig(&Wire, I2C_SDA_PIN, I2C_SCL_PIN, 100000);
+I2CBus mainBus(i2cBusConfig);
+
 // Конфигурация и создание HAL-объектов
 LCD2004Config lcdConfig(
     LCD_I2C_ADDR,
-    I2C_SDA_PIN,
-    I2C_SCL_PIN,
+    mainBus,
     LCD_COLUMNS,
     LCD_ROWS,
     true,
@@ -65,7 +68,7 @@ LCD2004Config lcdConfig(
 );
 LCD2004 lcd(lcdConfig);
 
-BME280Config bmeConfig(BME280_I2C_ADDR, I2C_SDA_PIN, I2C_SCL_PIN, SEA_LEVEL_PRESSURE_HPA);
+BME280Config bmeConfig(BME280_I2C_ADDR, mainBus, SEA_LEVEL_PRESSURE_HPA);
 BME280Sensor bme(bmeConfig);
 
 DS18B20Config dsConfig(DS18B20_PIN, 12, false, DS18B20_UPDATE_INTERVAL);
@@ -296,6 +299,9 @@ void handleSerialCommands() {
 void setup() {
     Serial.begin(115200);
     Serial.println("\n=== Banya Controller HAL ===");
+
+    // Инициализация I2C шины (перед устройствами!)
+    mainBus.begin();
 
     // Инициализация LCD
     Serial.print("Initializing LCD... ");

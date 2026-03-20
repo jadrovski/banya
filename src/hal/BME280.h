@@ -9,16 +9,14 @@
  */
 struct BME280Config {
     uint8_t i2cAddress;      // I2C адрес (по умолчанию 0x76)
-    uint8_t sdaPin;          // GPIO SDA (по умолчанию 21)
-    uint8_t sclPin;          // GPIO SCL (по умолчанию 22)
+    I2CBus& bus;             // Ссылка на I2C шину
     float seaLevelPressure;  // Давление на уровне моря в гПа (по умолчанию 1013.25)
 
     BME280Config(
-        uint8_t addr = 0x76,
-        uint8_t sda = 21,
-        uint8_t scl = 22,
+        uint8_t addr,
+        I2CBus& i2cBus,
         float pressure = 1013.25f
-    ) : i2cAddress(addr), sdaPin(sda), sclPin(scl), seaLevelPressure(pressure) {}
+    ) : i2cAddress(addr), bus(i2cBus), seaLevelPressure(pressure) {}
 };
 
 /**
@@ -35,7 +33,7 @@ struct BME280Data {
 
 /**
  * @brief Hardware Access Layer для сенсора BME280
- * 
+ *
  * Предоставляет измерение:
  * - Температуры (°C)
  * - Влажности (%)
@@ -54,8 +52,8 @@ public:
      * @brief Конструктор BME280
      * @param cfg Конфигурация сенсора
      */
-    explicit BME280Sensor(const BME280Config& cfg = BME280Config())
-        : I2CDevice(cfg.i2cAddress, cfg.sdaPin, cfg.sclPin),
+    explicit BME280Sensor(const BME280Config& cfg)
+        : I2CDevice(cfg.i2cAddress, cfg.bus),
           config(cfg),
           sensor(nullptr),
           lastData(),
@@ -70,9 +68,12 @@ public:
      * @return true если успешно
      */
     bool begin() override {
+        if (!I2CDevice::begin()) {
+            return false;
+        }
+
         sensor = new Adafruit_BME280();
-        
-        if (!sensor->begin(config.i2cAddress, i2cPort)) {
+        if (!sensor->begin(config.i2cAddress, bus.getWire())) {
             initialized = false;
             return false;
         }
@@ -171,7 +172,7 @@ public:
      * @return true если данные корректны
      */
     bool isValid() const {
-        return initialized && 
+        return initialized &&
                lastData.temperature > -100 && lastData.temperature < 150 &&
                lastData.humidity >= 0 && lastData.humidity <= 100;
     }
@@ -182,12 +183,8 @@ public:
     String getInfo() const override {
         String info = "BME280 @ 0x";
         info += String(config.i2cAddress, HEX);
-        info += " (SDA:";
-        info += config.sdaPin;
-        info += ", SCL:";
-        info += config.sclPin;
-        info += ")";
-        
+        info += " on " + bus.getInfo();
+
         if (initialized) {
             info += " T:";
             info += lastData.temperature;
@@ -197,7 +194,7 @@ public:
             info += lastData.pressure;
             info += "hPa";
         }
-        
+
         return info;
     }
 

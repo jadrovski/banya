@@ -198,6 +198,9 @@ Features:
 
 ## Development Conventions
 
+### Basic
+- Do not implement static methods, use objects and their behavior (OOP)
+
 ### Code Style
 
 - **File naming**: PascalCase for classes (e.g., `LEDStrip.cpp`)

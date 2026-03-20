@@ -2,42 +2,46 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include "I2CBus.h"
 
 /**
  * @brief Базовый класс для всех I2C устройств
- * 
+ *
  * Предоставляет общую функциональность для I2C устройств:
- * - Конфигурация пинов SDA/SCL
  * - Проверка наличия устройства на шине
  * - Базовая диагностика
+ * - Доступ к общей I2C шине
+ *
+ * @note I2C шина должна быть инициализирована ДО инициализации устройств
  */
 class I2CDevice {
 protected:
-    uint8_t sdaPin;
-    uint8_t sclPin;
-    uint8_t i2cAddress;
-    bool initialized;
-    TwoWire* i2cPort;
+    I2CBus& bus;          ///< Ссылка на I2C шину (обязательна)
+    uint8_t i2cAddress;   ///< I2C адрес устройства
+    bool initialized;     ///< Флаг инициализации
 
 public:
     /**
      * @brief Конструктор I2C устройства
      * @param address I2C адрес устройства
-     * @param sda GPIO пин SDA (по умолчанию 21)
-     * @param scl GPIO пин SCL (по умолчанию 22)
-     * @param wire Ссылка на I2C порт (Wire или Wire1)
+     * @param i2cBus Ссылка на объект I2C шины
      */
-    I2CDevice(uint8_t address, uint8_t sda = 21, uint8_t scl = 22, TwoWire* wire = &Wire)
-        : sdaPin(sda), sclPin(scl), i2cAddress(address), initialized(false), i2cPort(wire) {}
+    I2CDevice(uint8_t address, I2CBus& i2cBus)
+        : bus(i2cBus), i2cAddress(address), initialized(false) {}
 
     virtual ~I2CDevice() = default;
 
     /**
      * @brief Инициализация I2C устройства
+     *
+     * Проверяет что шина инициализирована
      * @return true если успешно
      */
     virtual bool begin() {
-        i2cPort->begin(sdaPin, sclPin);
+        if (!bus.isInitialized()) {
+            Serial.println("ERROR: I2C bus not initialized before device!");
+            return false;
+        }
         initialized = true;
         return true;
     }
@@ -47,8 +51,7 @@ public:
      * @return true если устройство отвечает
      */
     virtual bool isConnected() {
-        i2cPort->beginTransmission(i2cAddress);
-        return i2cPort->endTransmission() == 0;
+        return bus.hasDevice(i2cAddress);
     }
 
     /**
@@ -62,9 +65,16 @@ public:
     bool isInitialized() const { return initialized; }
 
     /**
+     * @brief Получить доступ к I2C шине
+     */
+    I2CBus& getBus() const { return bus; }
+
+    /**
      * @brief Получить информацию об устройстве
      */
     virtual String getInfo() const {
-        return String("I2C Device @ 0x") + String(i2cAddress, HEX);
+        String info = String("I2C Device @ 0x") + String(i2cAddress, HEX);
+        info += " on " + bus.getInfo();
+        return info;
     }
 };
