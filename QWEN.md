@@ -187,6 +187,7 @@ Features:
 
 ### Basic
 - Do not implement static methods, use objects and their behavior (OOP)
+- Comments are often redundant and verbose—they tend to become obsolete and are often unnecessary. It’s better to write clear, self-explanatory code instead.
 
 ### Code Style
 
