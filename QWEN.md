@@ -136,7 +136,7 @@ On first boot or WiFi failure, the device automatically starts in AP mode for in
 
 ## Operating Modes
 
-The system supports multiple display pages accessible via touch sensor or serial commands:
+The system supports multiple display pages accessible via touch sensor:
 
 | Page | Description |
 |------|-------------|
@@ -146,19 +146,6 @@ The system supports multiple display pages accessible via touch sensor or serial
 | System Status | WiFi status, IP address, memory info |
 | WiFi Info | Connected WiFi network details |
 | WiFi Setup | AP mode configuration (when not connected) |
-
-## Serial Interface
-
-Interactive commands via serial monitor (115200 baud):
-
-```
-Modes:      A=Auto, T=Temp, H=Humidity, C=Comfort, S=Safety, R=Relax, M=Manual
-Brightness: 0-9 (0=off, 9=max)
-Colors:     W=White, E=Red, F=Green, V=Blue
-Effects:    P=Pulse, Q=Rainbow, B=Blink, X=Stop, O=Off
-Pages:      > or . = Next, < or , = Prev
-Info:       I=Status, D=HAL Diagnostics, L=WiFi Reconnect
-```
 
 ## Touch Sensor Actions
 

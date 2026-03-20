@@ -9,7 +9,6 @@
 #include "pages/page/SystemStatusPage.h"
 #include "pages/page/LEDStripPage.h"
 #include "pages/page/WiFiSetupPage.h"
-#include "color/BanyaColors.h"
 #include "pages/PageManager.h"
 #include "web/WebServer.h"
 
@@ -179,101 +178,6 @@ void handleTouchCallback(TouchEvent event) {
 }
 
 // ============================================================================
-// Обработка серийных команд
-// ============================================================================
-
-void handleSerialCommands() {
-    while (Serial.available()) {
-        char cmd = Serial.read();
-        cmd = toupper(cmd);
-
-        switch (cmd) {
-            // Управление яркостью (0-9)
-            case '0': ledStrip.setBrightness(0.005);
-                break;
-            case '1': ledStrip.setBrightness(0.1);
-                break;
-            case '2': ledStrip.setBrightness(0.2);
-                break;
-            case '3': ledStrip.setBrightness(0.3);
-                break;
-            case '4': ledStrip.setBrightness(0.4);
-                break;
-            case '5': ledStrip.setBrightness(0.5);
-                break;
-            case '6': ledStrip.setBrightness(0.6);
-                break;
-            case '7': ledStrip.setBrightness(0.7);
-                break;
-            case '8': ledStrip.setBrightness(0.8);
-                break;
-            case '9': ledStrip.setBrightness(0.9);
-                break;
-
-            // Ручные цвета
-            case 'W':
-                ledStrip.setColor(RGB(255, 255, 255));
-                Serial.println("Color: White");
-                break;
-            case 'E': // Red
-                ledStrip.setColor(RGB(255, 0, 0));
-                Serial.println("Color: Red");
-                break;
-            case 'F': // Green
-                ledStrip.setColor(RGB(0, 255, 0));
-                Serial.println("Color: Green");
-                break;
-            case 'U': // Blue (U like blUe)
-                ledStrip.setColor(RGB(0, 0, 255));
-                Serial.println("Color: Blue");
-                break;
-
-            // Информация
-            case 'I':
-                Serial.println(ledStrip.getInfo());
-                break;
-
-            // HAL диагностика
-            case 'D':
-                Serial.println("=== HAL Diagnostics ===");
-                Serial.println(lcd.getInfo());
-                Serial.println(bme.getInfo());
-                Serial.println(ds18b20.getInfo());
-                Serial.println(ledStrip.getInfo());
-                Serial.println(wifi.getInfo());
-                Serial.print("Touch: Value=");
-                Serial.print(touch.read());
-                Serial.print(", Baseline=");
-                Serial.print(touch.getBaselineValue());
-                Serial.print(", Threshold=");
-                Serial.println(touch.getThreshold());
-                Serial.println(touch.getInfo());
-                Serial.println(pageMgr.getInfo());
-                break;
-
-            // WiFi переподключение
-            case 'L': // Link
-                Serial.println("WiFi: Reconnecting...");
-                wifi.reconnect();
-                break;
-
-            // Переключение страниц
-            case '>':
-            case '.':
-            case 'N': // Next page (не конфликтует с другими командами)
-                Serial.println("Page: Next");
-                pageMgr.nextPage();
-                break;
-            case '<':
-            case ',':
-                Serial.println("Page: Prev");
-                pageMgr.prevPage();
-                break;
-        }
-    }
-}
-
-// ============================================================================
 // Setup
 // ============================================================================
 
@@ -434,14 +338,6 @@ void setup() {
     pageMgr.goToPage(0);
     pageMgr.render();
 
-    // Вывод информации о режимах
-    Serial.println("\n=== Commands ===");
-    Serial.println("Manual: 0-9=Brightness, R/G/B/W=Colors, +=Warmer, -=Cooler");
-    Serial.println("Effects: P=Pulse, Q=Rainbow, B=Blink, X=Stop, O=Off");
-    Serial.println("Pages: > or . = Next, < or , = Prev, Touch Tap = Next");
-    Serial.println("Touch: Long press = WiFi reconnect, Very-long press = WiFi Setup");
-    Serial.println("WiFi Setup: V=Enter Setup Mode (very-long press)");
-    Serial.println("Diagnostics: D=HAL Info, I=Status, L=WiFi Reconnect");
     Serial.println("\nWeb Interface: http://" + wifi.getIPAddressString());
     Serial.println("Touch sensor: " + touch.getPinName() + " (for page switching)");
     Serial.println("WiFi Settings: " + wifiSettings.getInfo());
@@ -454,8 +350,6 @@ void setup() {
 IntervalTimer lcdTimer(5000); // 5 секунд
 
 void loop() {
-    handleSerialCommands();
-
     // Автоматическое обновление температур DS18B20
     ds18b20.handleLoop();
 
