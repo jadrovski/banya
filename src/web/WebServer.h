@@ -63,12 +63,23 @@ public:
     /**
      * @brief Конструктор веб-сервера
      * @param cfg Конфигурация
+     * @param statusProv Провайдер статуса
      * @param led Указатель на RGBLED
+     * @param wifiMgr Указатель на WiFiManager
+     * @param wifiSettingsPtr Указатель на WiFiSettings
+     * @param display Указатель на LCD
+     * @param otaMgr Указатель на OTAManager
      */
-    explicit BanyaWebServer(const WebServerConfig &cfg = WebServerConfig(), RGBLED *led = nullptr)
-        : config(cfg), server(nullptr), statusProvider(nullptr), ledStrip(led),
-          wifiManager(nullptr), wifiSettings(nullptr), lcd(nullptr),
-          otaManager(nullptr),
+    BanyaWebServer(const WebServerConfig &cfg,
+                   std::function<Status()> statusProv,
+                   RGBLED *led,
+                   WiFiManager *wifiMgr,
+                   WiFiSettings *wifiSettingsPtr,
+                   LCD2004 *display,
+                   void *otaMgr)
+        : config(cfg), server(nullptr), statusProvider(statusProv), ledStrip(led),
+          wifiManager(wifiMgr), wifiSettings(wifiSettingsPtr), lcd(display),
+          otaManager(otaMgr),
           running(false) {
     }
 
@@ -139,54 +150,6 @@ public:
         if (server && running) {
             server->handleClient();
         }
-    }
-
-    /**
-     * @brief Установить провайдер статуса
-     * @param provider Функция, возвращающая BanyaStatus
-     */
-    void setStatusProvider(std::function<Status()> provider) {
-        statusProvider = provider;
-    }
-
-    /**
-     * @brief Установить указатель на RGBLED
-     * @param led Указатель на RGBLED
-     */
-    void setLEDStrip(RGBLED *led) {
-        ledStrip = led;
-    }
-
-    /**
-     * @brief Установить менеджер WiFi для конфигурации
-     * @param manager Указатель на WiFiManager
-     */
-    void setWiFiManager(WiFiManager *manager) {
-        wifiManager = manager;
-    }
-
-    /**
-     * @brief Установить хранилище настроек WiFi
-     * @param settings Указатель на WiFiSettings
-     */
-    void setWiFiSettings(WiFiSettings *settings) {
-        wifiSettings = settings;
-    }
-
-    /**
-     * @brief Установить указатель на LCD
-     * @param lcd Указатель на LCD
-     */
-    void setLCD(LCD2004 *display) {
-        lcd = display;
-    }
-
-    /**
-     * @brief Установить указатель на OTA менеджер
-     * @param ota Указатель на OTAManager
-     */
-    void setOTA(void *ota) {
-        otaManager = ota;
     }
 
     /**

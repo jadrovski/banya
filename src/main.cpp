@@ -62,11 +62,15 @@ RGBLED ledStrip(
 WiFiSettings wifiSettings;
 WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
 WiFiManager wifi(wifiConfig);
-BanyaWebServer webServer;
 
 // OTA
 LCDOTAPresenter otaPresenter(&lcd);
 OTAManager ota(OTAConfig("banya-controller", 3232, nullptr, false), &otaPresenter);
+
+// Forward declaration
+Status getStatus();
+
+BanyaWebServer webServer(WebServerConfig(), getStatus, &ledStrip, &wifi, &wifiSettings, &lcd, &ota);
 
 TouchSensor touch(TouchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, TOUCH_LONG_PRESS_MS,
                               TOUCH_VERY_LONG_PRESS_MS));
@@ -146,13 +150,17 @@ void handleTouchCallback(TouchEvent event) {
     }
 }
 
-void setup() {
+void setupSerial() {
     Serial.begin(115200);
     Serial.println("\n=== Banya Controller HAL ===");
+}
 
+void setupI2C() {
     // Инициализация I2C шины (перед устройствами!)
     mainBus.begin();
+}
 
+void setupLCD() {
     // Инициализация LCD
     Serial.print("Initializing LCD... ");
     if (lcd.begin()) {
@@ -161,7 +169,9 @@ void setup() {
     } else {
         Serial.println("FAILED");
     }
+}
 
+void setupBME280() {
     // Инициализация BME280
     Serial.print("Initializing BME280... ");
     if (bme.begin()) {
@@ -169,7 +179,9 @@ void setup() {
     } else {
         Serial.println("FAILED - check wiring!");
     }
+}
 
+void setupDS18B20() {
     // Инициализация DS18B20
     Serial.print("Initializing DS18B20... ");
     if (ds18b20.begin()) {
@@ -179,7 +191,9 @@ void setup() {
     } else {
         Serial.println("FAILED - no sensors found");
     }
+}
 
+void setupLEDStrip() {
     // Инициализация RGB LED
     Serial.print("Initializing RGB LED... ");
     if (ledStrip.begin()) {
@@ -189,7 +203,9 @@ void setup() {
     } else {
         Serial.println("FAILED");
     }
+}
 
+void setupWifi() {
     // Инициализация WiFi Settings (NVS)
     Serial.print("Initializing WiFi Settings (NVS)... ");
     if (wifiSettings.begin()) {
@@ -228,6 +244,18 @@ void setup() {
 
     wifi.connect();
 
+    if (!wifi.isConnected()) {
+        Serial.println("WiFi: Failed to connect");
+        lcd.setCursor(0, 3);
+        lcd.print("Failed!");
+        // Включаем AP если не удалось подключиться и есть настройки
+        if (wifiSettings.isConfigured()) {
+            Serial.println("WiFi: No connection, will enter AP mode on request");
+        }
+    }
+}
+
+void setupOTA() {
     // Инициализация OTA (только если WiFi подключён)
     if (wifi.isConnected()) {
         Serial.print("Initializing OTA... ");
@@ -238,29 +266,21 @@ void setup() {
             Serial.println("FAILED");
         }
     }
+}
 
+void setupWebServer() {
     // Запуск веб-сервера (всегда, даже если WiFi не подключён)
     webServer.begin();
-    webServer.setStatusProvider(getStatus);
-    webServer.setLEDStrip(&ledStrip);
-    webServer.setWiFiManager(&wifi);
-    webServer.setWiFiSettings(&wifiSettings);
-    webServer.setLCD(&lcd);
-    webServer.setOTA(&ota);
     webServer.start();
-
     if (wifi.isConnected()) {
-        Serial.printf("WebServer: Started on http://%s:%u\n", wifi.getIPAddressString().c_str(), webServer.getConfig().port);
-    } else {
-        Serial.println("WiFi: Failed to connect");
-        lcd.setCursor(0, 3);
-        lcd.print("Failed!");
-        // Включаем AP если не удалось подключиться и есть настройки
-        if (wifiSettings.isConfigured()) {
-            Serial.println("WiFi: No connection, will enter AP mode on request");
-        }
+        Serial.printf(
+            "WebServer: Started on http://%s:%u\n",
+            wifi.getIPAddressString().c_str(),
+            webServer.getConfig().port);
     }
+}
 
+void setupTouch() {
     // Инициализация Touch сенсора
     Serial.print("Initializing Touch... ");
     if (touch.begin()) {
@@ -275,7 +295,9 @@ void setup() {
     } else {
         Serial.println("FAILED");
     }
+}
 
+void setupPageManager() {
     // Создание страниц
     Serial.println("Creating display pages...");
 
@@ -283,7 +305,8 @@ void setup() {
     pageManager.addPage(std::unique_ptr<DisplayPage>(new BME280Page(&bme, "BME280 Sensor")));
     pageManager.addPage(std::unique_ptr<DisplayPage>(new LEDStripPage(&ledStrip, "LED Strip")));
     pageManager.addPage(std::unique_ptr<DisplayPage>(new WiFiInfoPage(&wifi, "WiFi Info")));
-    wifiSetupIdx = pageManager.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
+    wifiSetupIdx = pageManager.addPage(
+        std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
     pageManager.addPage(std::unique_ptr<DisplayPage>(new SystemStatusPage(&wifi, "System Status")));
 
     // Установка начальной страницы
@@ -294,7 +317,21 @@ void setup() {
     Serial.println(pageManager.getPageCount());
 }
 
-IntervalTimer lcdTimer(5000); // 5 секунд
+void setup() {
+    setupSerial();
+    setupI2C();
+    setupLCD();
+    setupBME280();
+    setupDS18B20();
+    setupLEDStrip();
+    setupWifi();
+    setupOTA();
+    setupWebServer();
+    setupTouch();
+    setupPageManager();
+}
+
+IntervalTimer lcdConnectionTimer(5000); // 5 секунд
 
 void loop() {
     // Автоматическое обновление температур DS18B20
@@ -315,7 +352,7 @@ void loop() {
     pageManager.handleLoop();
 
     // Проверка подключения LCD (периодически)
-    lcdTimer.handleLoop([] {
+    lcdConnectionTimer.handleLoop([] {
         if (!lcd.isConnected()) {
             Serial.println("LCD: Reconnecting...");
             lcd.begin();
