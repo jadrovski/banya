@@ -91,6 +91,9 @@ TouchSensor touch(touchConfig);
 // Менеджер страниц
 PageManager pageMgr(lcd);
 
+// Индекс страницы WiFi Setup (используется в callback)
+uint8_t wifiSetupIdx = -1;
+
 // ============================================================================
 // Функции LCD
 // ============================================================================
@@ -162,7 +165,7 @@ void handleTouchCallback(TouchEvent event) {
             }
 
             // Переходим на страницу настройки WiFi
-            pageMgr.goToPage(4);
+            pageMgr.goToPage(wifiSetupIdx);
             pageMgr.render();
             break;
 
@@ -388,7 +391,6 @@ void setup() {
 
     if (wifiConnected) {
         String ip = wifi.getIPAddressString();
-        Serial.println(ip);
         Serial.println("WebServer: Started on http://" + ip);
     } else {
         Serial.println("WiFi: Failed to connect");
@@ -422,7 +424,7 @@ void setup() {
     pageMgr.addPage(std::unique_ptr<DisplayPage>(new BME280Page(&bme, "BME280 Sensor")));
     pageMgr.addPage(std::unique_ptr<DisplayPage>(new LEDStripPage(&ledStrip, "LED Strip")));
     pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiInfoPage(&wifi, "WiFi Info")));
-    pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
+    wifiSetupIdx = pageMgr.addPage(std::unique_ptr<DisplayPage>(new WiFiSetupPage(&wifi, &wifiSettings, "WiFi Setup")));
     pageMgr.addPage(std::unique_ptr<DisplayPage>(new SystemStatusPage(&wifi, "System Status")));
 
     Serial.print("Pages created: ");

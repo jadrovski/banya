@@ -48,7 +48,9 @@ public:
      * @return true если успешно
      */
     bool goToPage(uint8_t index) {
-        if (index >= pages.size()) return false;
+        if (index >= pages.size() || index < 0) {
+            return false;
+        }
 
         // Выход из текущей страницы
         if (currentPageIndex < pages.size() && pages[currentPageIndex]) {
