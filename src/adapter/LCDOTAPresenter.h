@@ -17,26 +17,6 @@ public:
      */
     explicit LCDOTAPresenter(LCD2004* display) : lcd(display) {}
 
-    /**
-     * @brief Initialize presenter (create custom characters if needed)
-     */
-    void begin() {
-        if (lcd) {
-            // Create full block character for progress bar (character 255)
-            uint8_t fullBlock[8] = {
-                0b11111,
-                0b11111,
-                0b11111,
-                0b11111,
-                0b11111,
-                0b11111,
-                0b11111,
-                0b11111
-            };
-            lcd->createChar(255, fullBlock);
-        }
-    }
-
     void showStart() override {
         if (!lcd) return;
 
@@ -76,7 +56,7 @@ public:
         lcd->print("[");
         for (uint8_t i = 0; i < barWidth - 2; i++) {
             if (i < filled) {
-                lcd->write(byte(255)); // Full block
+                lcd->write(FILLED_BLOCK);
             } else {
                 lcd->print("-");
             }

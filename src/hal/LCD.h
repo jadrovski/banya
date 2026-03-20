@@ -7,6 +7,7 @@
 #define WIFI_CHAR byte(1)
 #define RUSSIAN_B_CHAR byte(2)
 #define RUSSIAN_YA_CHAR byte(3)
+#define FILLED_BLOCK byte(4)
 
 /**
  * @brief Конфигурация LCD дисплея
@@ -45,6 +46,7 @@ private:
     static const byte wifiIcon[8];
     static const byte touchIcon[8];
     static const byte arrowRight[8];
+    static const byte filledBlock[8];
 
     LCD2004Config config;
     LiquidCrystal_I2C *lcd;
@@ -118,9 +120,11 @@ public:
             noCursor();
         }
 
+        // Create custom characters
         lcd->createChar(WIFI_CHAR, const_cast<byte*>(wifiIcon));
         lcd->createChar(RUSSIAN_B_CHAR, const_cast<byte*>(russianB));
         lcd->createChar(RUSSIAN_YA_CHAR, const_cast<byte*>(russianYA));
+        lcd->createChar(FILLED_BLOCK, const_cast<byte*>(filledBlock));
 
         initialized = true;
         return true;
@@ -425,4 +429,15 @@ const byte LCD2004::arrowRight[8] = {
     B00010,
     B00000,
     B00000,
+};
+
+const byte LCD2004::filledBlock[8] = {
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111
 };

@@ -275,9 +275,6 @@ void setup() {
             Serial.println(otaConfig.hostname);
             Serial.print("OTA: Port: ");
             Serial.println(otaConfig.port);
-
-            // Initialize OTA presenter
-            otaPresenter.begin();
         } else {
             Serial.println("FAILED");
         }
