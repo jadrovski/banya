@@ -54,7 +54,7 @@ constexpr uint32_t TOUCH_VERY_LONG_PRESS_MS = 5000;
 // ============================================================================
 
 // I2C шина (одна для всех устройств на шине)
-I2CBus mainBus(I2CBusConfig(&Wire, I2C_SDA_PIN, I2C_SCL_PIN, I2C_SPEED));
+I2CBus mainBus(I2CBusConfig(&Wire, I2C_SDA_PIN, I2C_SCL_PIN, I2C_SPEED)); // NOLINT(*-interfaces-global-init)
 
 // Конфигурация и создание HAL-объектов
 LCD2004 lcd(LCD2004Config(LCD_I2C_ADDR, mainBus, LCD_COLUMNS, LCD_ROWS, true, false));
