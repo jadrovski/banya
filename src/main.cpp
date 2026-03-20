@@ -35,9 +35,12 @@ constexpr unsigned long DS18B20_UPDATE_INTERVAL = 2000; // 2 секунды
 constexpr uint8_t LED_R_PIN = 25;
 constexpr uint8_t LED_G_PIN = 26;
 constexpr uint8_t LED_B_PIN = 27;
-constexpr uint8_t LEDC_CHANNEL_R = 0;
-constexpr uint8_t LEDC_CHANNEL_G = 1;
-constexpr uint8_t LEDC_CHANNEL_B = 2;
+constexpr uint8_t LED_PWM_CHANNEL_R = 0;
+constexpr uint8_t LED_PWM_CHANNEL_G = 1;
+constexpr uint8_t LED_PWM_CHANNEL_B = 2;
+constexpr uint32_t LED_PWM_FREQUENCY = 1000;
+constexpr uint8_t LED_PWM_RESOLUTION = 8;
+constexpr float LED_GAMMA = 2.2f;
 
 constexpr touch_pad_t TOUCH_PIN = TOUCH_PAD_NUM3; // Touch конфигурация (используем T3 = GPIO15)
 constexpr float TOUCH_THRESHOLD_PERCENT = 0.8f; // Порог срабатывания тача (% от baseline)
@@ -55,8 +58,8 @@ DS18B20Manager ds18b20(DS18B20Config(DS18B20_PIN, 12, false, DS18B20_UPDATE_INTE
 RGBLED ledStrip(
     RGBLEDConfig(
         LED_R_PIN, LED_G_PIN, LED_B_PIN,
-        LEDC_CHANNEL_R, LEDC_CHANNEL_G, LEDC_CHANNEL_B,
-        1000, 8, 2.2f, true));
+        LED_PWM_CHANNEL_R, LED_PWM_CHANNEL_G, LED_PWM_CHANNEL_B,
+        LED_PWM_FREQUENCY, LED_PWM_RESOLUTION, LED_GAMMA, true));
 
 // WiFi и веб-сервер
 WiFiSettings wifiSettings;
