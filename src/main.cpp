@@ -20,6 +20,7 @@
 // I2C конфигурация
 constexpr uint8_t I2C_SDA_PIN = 21;
 constexpr uint8_t I2C_SCL_PIN = 22;
+constexpr uint32_t I2C_SPEED = 100000;
 
 // LCD конфигурация
 constexpr uint8_t LCD_I2C_ADDR = 0x27;
@@ -54,30 +55,17 @@ constexpr uint32_t TOUCH_VERY_LONG_PRESS_MS = 5000;
 // ============================================================================
 
 // I2C шина (одна для всех устройств на шине)
-I2CBusConfig i2cBusConfig(&Wire, I2C_SDA_PIN, I2C_SCL_PIN, 100000);
-I2CBus mainBus(i2cBusConfig);
+I2CBus mainBus(I2CBusConfig(&Wire, I2C_SDA_PIN, I2C_SCL_PIN, I2C_SPEED));
 
 // Конфигурация и создание HAL-объектов
-LCD2004Config lcdConfig(
-    LCD_I2C_ADDR,
-    mainBus,
-    LCD_COLUMNS,
-    LCD_ROWS,
-    true,
-    false
-);
-LCD2004 lcd(lcdConfig);
-
-BME280Config bmeConfig(BME280_I2C_ADDR, mainBus, SEA_LEVEL_PRESSURE_HPA);
-BME280Sensor bme(bmeConfig);
-
-DS18B20Config dsConfig(DS18B20_PIN, 12, false, DS18B20_UPDATE_INTERVAL);
-DS18B20Manager ds18b20(dsConfig);
-
-RGBLEDConfig ledConfig(LED_R_PIN, LED_G_PIN, LED_B_PIN,
-                            LEDC_CHANNEL_R, LEDC_CHANNEL_G, LEDC_CHANNEL_B,
-                            1000, 8, 2.2f, true);
-RGBLED ledStrip(ledConfig);
+LCD2004 lcd(LCD2004Config(LCD_I2C_ADDR, mainBus, LCD_COLUMNS, LCD_ROWS, true, false));
+BME280Sensor bme(BME280Config(BME280_I2C_ADDR, mainBus, SEA_LEVEL_PRESSURE_HPA));
+DS18B20Manager ds18b20(DS18B20Config(DS18B20_PIN, 12, false, DS18B20_UPDATE_INTERVAL));
+RGBLED ledStrip(
+    RGBLEDConfig(
+        LED_R_PIN, LED_G_PIN, LED_B_PIN,
+        LEDC_CHANNEL_R, LEDC_CHANNEL_G, LEDC_CHANNEL_B,
+        1000, 8, 2.2f, true));
 
 // WiFi и веб-сервер
 WiFiSettings wifiSettings;
@@ -85,10 +73,10 @@ WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загру
 WiFiManager wifi(wifiConfig);
 BanyaWebServer webServer;
 
-// OTA конфигурация
-OTAConfig otaConfig;
-OTAManager ota(otaConfig);
+// OTA
+OTAConfig otaConfig("banya-controller", 3232, nullptr, true, false);
 LCDOTAPresenter otaPresenter(&lcd);
+OTAManager ota(otaConfig, &otaPresenter);
 
 // Touch сенсор
 TouchConfig touchConfig(
@@ -373,12 +361,6 @@ void setup() {
 
     // Инициализация OTA (только если WiFi подключён)
     if (wifiConnected) {
-        // Configure OTA
-        otaConfig.hostname = "banya-controller";
-        otaConfig.port = 3232;
-        otaConfig.enableProgress = true;
-        otaConfig.enableDebug = false;
-
         Serial.print("Initializing OTA... ");
         if (ota.begin()) {
             Serial.println("OK");
@@ -387,9 +369,8 @@ void setup() {
             Serial.print("OTA: Port: ");
             Serial.println(otaConfig.port);
 
-            // Initialize and set OTA presenter
+            // Initialize OTA presenter
             otaPresenter.begin();
-            ota.setPresenter(&otaPresenter);
         } else {
             Serial.println("FAILED");
         }

@@ -1,7 +1,7 @@
 #include "OTA.h"
 #include "OTAPresenter.h"
 
-OTAManager::OTAManager(const OTAConfig &config) : config(config) {
+OTAManager::OTAManager(const OTAConfig &config, OTAPresenter *presenter) : config(config), presenter(presenter) {
 }
 
 bool OTAManager::begin() {
@@ -111,10 +111,6 @@ void OTAManager::onProgress(std::function<void(unsigned int, unsigned int)> call
 
 void OTAManager::onError(std::function<void(ota_error_t)> callback) {
     onErrorCallback = callback;
-}
-
-void OTAManager::setPresenter(OTAPresenter *presenter) {
-    this->presenter = presenter;
 }
 
 void OTAManager::setupCallbacks() {

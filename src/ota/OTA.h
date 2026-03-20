@@ -29,11 +29,19 @@ struct OTAConfig {
     uint16_t port = 3232;               ///< OTA port (default: 3232)
     bool enableProgress = true;         ///< Enable progress callbacks
     bool enableDebug = false;           ///< Enable debug output
+
+    OTAConfig(
+        const char* host = nullptr,
+        uint16_t p = 3232,
+        const char* pass = nullptr,
+        bool progress = true,
+        bool debug = false
+    ) : hostname(host), password(pass), port(p), enableProgress(progress), enableDebug(debug) {}
 };
 
 /**
  * @brief OTA Manager for ESP32
- * 
+ *
  * Handles Over-The-Air firmware updates using ArduinoOTA.
  * Supports progress tracking, error handling, and callbacks.
  */
@@ -42,8 +50,9 @@ public:
     /**
      * @brief Construct a new OTA Manager
      * @param config OTA configuration
+     * @param presenter Pointer to OTAPresenter implementation (optional)
      */
-    explicit OTAManager(const OTAConfig& config = OTAConfig());
+    OTAManager(const OTAConfig& config = OTAConfig(), OTAPresenter* presenter = nullptr);
 
     /**
      * @brief Initialize OTA manager
@@ -109,12 +118,6 @@ public:
      * @param callback Callback function (error code)
      */
     void onError(std::function<void(ota_error_t)> callback);
-
-    /**
-     * @brief Set presenter for displaying OTA status
-     * @param presenter Pointer to OTAPresenter implementation
-     */
-    void setPresenter(OTAPresenter* presenter);
 
 private:
     OTAConfig config;
