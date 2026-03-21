@@ -12,9 +12,9 @@ struct TempThreshold {
 };
 
 const TempThreshold thresholds[7] = {
-    {0,  -50,  255, 0, 255},    // Range 0: Magenta
+    {0,  -50,  255, 0, 255},   // Range 0: Magenta
     {35,  25, 0, 0, 255},      // Range 1: Blue
-    {62,  55, 255, 190, 160},    // Range 2: Light Orange/White
+    {62,  55, 100, 200, 255},  // Range 2: Light Blue
     {71,  68, 0, 255, 255},    // Range 3: Aqua
     {77,  74, 0, 255, 0},      // Range 4: Green
     {82,  79, 255, 210, 0},    // Range 5: Orange (reduced green for clearer Red transition)

@@ -11,7 +11,7 @@ struct TempThreshold {
 static const TempThreshold thresholds[TemperatureLEDController::NUM_RANGES] = {
     {0,   -50, 255, 0,   255},   // Range 0: Magenta (< 0°C)
     {35,  25,  0,   0,   255},   // Range 1: Blue (0-35°C)
-    {62,  55,  255, 190, 160},   // Range 2: Light Orange (35-62°C)
+    {62,  55,  100, 200, 255},   // Range 2: Light Blue (35-62°C)
     {71,  68,  0,   255, 255},   // Range 3: Aqua (62-71°C)
     {77,  74,  0,   255, 0},     // Range 4: Green (71-77°C)
     {82,  79,  255, 210, 0},     // Range 5: Orange (77-82°C)

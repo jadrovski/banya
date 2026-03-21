@@ -2274,7 +2274,7 @@ h1 {
         const colorRanges = [
             { max: 35, color: '#FF00FF', name: 'Magenta (0-35°C)' },
             { max: 55, color: '#0000FF', name: 'Blue (35-55°C)' },
-            { max: 62, color: '#FFBEA0', name: 'Light Orange (55-62°C)' },
+            { max: 62, color: '#64C8FF', name: 'Light Blue (55-62°C)' },
             { max: 68, color: '#FFBE00', name: 'Orange (62-68°C)' },
             { max: 74, color: '#00FF00', name: 'Green (68-74°C)' },
             { max: 80, color: '#00FFFF', name: 'Aqua (74-80°C)' },
