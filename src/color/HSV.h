@@ -34,6 +34,8 @@ public:
 
     HSV desaturate(float factor) const;
 
+    HSV blend(const HSV& other, float ratio) const;
+
     // Color transformations
     RGB toRGB() const override;
 

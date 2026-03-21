@@ -546,25 +546,17 @@ void loop() {
     float temp = mockTemperature >= 0 ? mockTemperature : ds18b20.getTemperature(0);
 
     if (temp != DEVICE_DISCONNECTED_C) {
-        // Only update temperature when not fading (avoid race condition with fade task)
+        // Update temperature and get displayed color
         if (!tempColor.isFadingActive()) {
             tempColor.updateTemperature(temp);
+
+            // Write color to LED when not fading
+            ledStrip.setColor(tempColor.getDisplayedColor());
 
             // Run fade animation on Core 0 when color changes
             if (tempColor.isFadingActive()) {
                 tempColor.runBlockingFade(&ledStrip);
             }
-        }
-
-        // Debug output
-        static unsigned long lastDebug = 0;
-        if (millis() - lastDebug > 5000) {
-            RGB color = tempColor.getDisplayedColor();
-            Serial.printf("Temp: %.1f°C Range: %u Color: R=%u G=%u B=%u Fade: %s\n",
-                temp, tempColor.getCurrentRangeIndex(),
-                color.red, color.green, color.blue,
-                tempColor.isFadingActive() ? "yes" : "no");
-            lastDebug = millis();
         }
     } else {
         Serial.printf("Temperature sensor disconnected! Temp reading: %.1f\n", temp);

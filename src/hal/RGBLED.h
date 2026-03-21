@@ -261,6 +261,51 @@ public:
     }
 
     /**
+     * @brief Плавный переход к цвету через HSV (плавные переходы по тону)
+     * @param target Целевой цвет
+     * @param durationMs Длительность в мс
+     */
+    virtual void fadeToHSV(const RGB& target, uint32_t durationMs) {
+        RGB start = currentColor;
+        unsigned long startTime = millis();
+
+        while (millis() - startTime < durationMs) {
+            float progress = (millis() - startTime) / (float)durationMs;
+            setColor(start.blendHSV(target, progress));
+            delay(10);
+        }
+
+        setColor(target);
+    }
+
+    /**
+     * @brief Плавный переход к цвету через HSV (кратчайший путь по тону)
+     * @param target Целевой цвет
+     * @param durationMs Длительность в мс
+     */
+    virtual void fadeToHSVShortestPath(const RGB& target, uint32_t durationMs) {
+        RGB start = currentColor;
+        unsigned long startTime = millis();
+
+        while (millis() - startTime < durationMs) {
+            float progress = (millis() - startTime) / (float)durationMs;
+            setColor(start.blendHSVShortestPath(target, progress));
+            delay(10);
+        }
+
+        setColor(target);
+    }
+
+    /**
+     * @brief Плавный переход к цвету через HSV
+     * @param target Целевой цвет HSV
+     * @param durationMs Длительность в мс
+     */
+    virtual void fadeToHSV(const HSV& target, uint32_t durationMs) {
+        fadeToHSV(target.toRGB(), durationMs);
+    }
+
+    /**
      * @brief Мигание
      * @param color Цвет мигания
      * @param onTime Время включения (мс)

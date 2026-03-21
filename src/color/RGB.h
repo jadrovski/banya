@@ -29,6 +29,10 @@ public:
     // Color operations
     RGB blend(const RGB &other, float ratio) const;
 
+    RGB blendHSV(const RGB &other, float ratio) const;
+
+    RGB blendHSVShortestPath(const RGB &other, float ratio) const;
+
     RGB dim(float factor) const;
 
     RGB brighten(float factor) const;

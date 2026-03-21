@@ -30,6 +30,32 @@ RGB RGB::blend(const RGB& other, float ratio) const {
     );
 }
 
+RGB RGB::blendHSV(const RGB& other, float ratio) const {
+    HSV start = toHSV();
+    HSV end = other.toHSV();
+    return start.blend(end, ratio).toRGB();
+}
+
+RGB RGB::blendHSVShortestPath(const RGB& other, float ratio) const {
+    HSV start = toHSV();
+    HSV end = other.toHSV();
+    
+    float h1 = start.hue;
+    float h2 = end.hue;
+    
+    float deltaH = h2 - h1;
+    if (deltaH > 180) {
+        h1 += 360;
+    } else if (deltaH < -180) {
+        h2 += 360;
+    }
+    
+    HSV adjustedStart(h1, start.saturation, start.value);
+    HSV adjustedEnd(h2, end.saturation, end.value);
+    
+    return adjustedStart.blend(adjustedEnd, ratio).toRGB();
+}
+
 RGB RGB::dim(float factor) const {
     factor = constrain(factor, 0.0f, 1.0f);
     return RGB(red * factor, green * factor, blue * factor);

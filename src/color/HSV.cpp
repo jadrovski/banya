@@ -52,6 +52,29 @@ HSV HSV::desaturate(float factor) const {
     return HSV(hue, newS, value);
 }
 
+HSV HSV::blend(const HSV& other, float ratio) const {
+    ratio = constrain(ratio, 0.0f, 1.0f);
+    
+    float h1 = hue;
+    float h2 = other.hue;
+    
+    float deltaH = h2 - h1;
+    if (deltaH > 180) {
+        h1 += 360;
+    } else if (deltaH < -180) {
+        h2 += 360;
+    }
+    
+    float newH = h1 * (1 - ratio) + h2 * ratio;
+    if (newH >= 360) newH -= 360;
+    if (newH < 0) newH += 360;
+    
+    float newS = saturation * (1 - ratio) + other.saturation * ratio;
+    float newV = value * (1 - ratio) + other.value * ratio;
+    
+    return HSV(newH, newS, newV);
+}
+
 RGB HSV::toRGB() const {
     float c = value * saturation;
     float x = c * (1 - fabs(fmod(hue / 60.0, 2) - 1));

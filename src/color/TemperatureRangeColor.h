@@ -66,6 +66,8 @@ public:
         updateRange(initialTemp);
         targetColor = getColorForRange(currentRangeIndex);
         displayedColor = targetColor;
+        // Mark as needing initial update
+        lastTemperature = -999.0f;  // Force first temperature reading to trigger update
     }
 
     /**
