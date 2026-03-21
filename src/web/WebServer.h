@@ -2327,14 +2327,36 @@ h1 {
                         mockActive = false;
                         document.getElementById('statusIndicator').className = 'status-indicator disabled';
                         document.getElementById('statusIndicator').textContent = '⏹️ Using Real Sensor';
-                        document.getElementById('tempValue').textContent = '--.-';
                         document.getElementById('colorPreview').style.backgroundColor = 'transparent';
-                        document.getElementById('colorName').textContent = 'Waiting for sensor...';
+                        document.getElementById('colorName').textContent = 'Real Sensor';
                         document.getElementById('message').textContent = 'Mock disabled - using DS18B20 sensor';
+                        // Fetch and display real sensor value
+                        fetchRealTemp();
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                });
+        }
+
+        function fetchRealTemp() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sensor1) {
+                        document.getElementById('tempValue').textContent = data.temp1.toFixed(1);
+                        const colorInfo = getColorForTemp(data.temp1);
+                        document.getElementById('colorPreview').style.backgroundColor = colorInfo.color;
+                        document.getElementById('colorName').textContent = colorInfo.name;
+                    } else {
+                        document.getElementById('tempValue').textContent = '--.-';
+                        document.getElementById('colorName').textContent = 'Sensor not found';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching real temp:', error);
+                    document.getElementById('tempValue').textContent = '--.-';
+                    document.getElementById('colorName').textContent = 'Error';
                 });
         }
 
