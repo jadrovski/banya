@@ -47,6 +47,12 @@ private:
     unsigned long fadeStartTime;
     bool isFading;
 
+    // Multi-core fade animation
+    RGBLED* ledStripPtr;
+    TaskHandle_t fadeTaskHandle;
+    bool fadeTaskRunning;
+    RGB fadeStartColor;  // Captured start color for current fade
+
 public:
     /**
      * @brief Constructor
@@ -54,7 +60,8 @@ public:
      */
     TemperatureRangeColor(float initialTemp = 25.0f)
         : currentRangeIndex(0), lastTemperature(initialTemp), isIncreasing(true), transitionBlend(0.0f),
-          targetColor(0, 0, 255), displayedColor(0, 0, 255), fadeStartTime(0), isFading(false) {
+          targetColor(0, 0, 255), displayedColor(0, 0, 255), fadeStartTime(0), isFading(false),
+          ledStripPtr(nullptr), fadeTaskHandle(nullptr), fadeTaskRunning(false), fadeStartColor(0, 0, 255) {
         // Determine initial range based on temperature
         updateRange(initialTemp);
         targetColor = getColorForRange(currentRangeIndex);
@@ -111,11 +118,17 @@ public:
     bool isFadingActive() const { return isFading; }
 
     /**
-     * @brief Run blocking fade animation to target color
+     * @brief Run fade animation on Core 0 (non-blocking for main loop)
      * @param ledStrip Pointer to RGBLED instance to update during fade
-     * @note This function blocks until fade is complete (FADE_DURATION_MS)
+     * @note Creates a task on Core 0 to handle fade animation
      */
     void runBlockingFade(RGBLED* ledStrip);
+
+    /**
+     * @brief Static task function for fade animation (runs on Core 0)
+     * @param parameter Pointer to TemperatureRangeColor instance
+     */
+    static void fadeAnimationTask(void* parameter);
 
     /**
      * @brief Get the RGB color for a specific range

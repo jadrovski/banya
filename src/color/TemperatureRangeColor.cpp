@@ -14,10 +14,10 @@ struct TempThreshold {
 const TempThreshold thresholds[7] = {
     {0,  -50,  255, 0, 255},    // Range 0: Magenta
     {35,  25, 0, 0, 255},      // Range 1: Blue
-    {62,  55, 0, 190, 160},    // Range 2: Light Orange/White
+    {62,  55, 255, 190, 160},    // Range 2: Light Orange/White
     {71,  68, 0, 255, 255},    // Range 3: Aqua
     {77,  74, 0, 255, 0},      // Range 4: Green
-    {82,  79, 255, 190, 0},    // Range 5: Orange
+    {82,  79, 255, 210, 0},    // Range 5: Orange (reduced green for clearer Red transition)
     {86,  84, 255, 0, 0}       // Range 6: Red
 };
 
@@ -36,12 +36,18 @@ RGB TemperatureRangeColor::updateTemperature(float temperature) {
         updateRange(temperature);
 
         // Update target color based on new temperature
-        targetColor = getCurrentColor();
+        RGB newTargetColor = getCurrentColor();
 
-        // Start fade animation if color changed
-        if (!displayedColor.operator==(targetColor)) {
+        // Start fade animation only if:
+        // 1. Not already fading AND color changed, OR
+        // 2. Already fading but target range changed (e.g., Orange->Red vs just moving within Red range)
+        if (!isFading && !displayedColor.operator==(newTargetColor)) {
             isFading = true;
             fadeStartTime = millis();
+            targetColor = newTargetColor;
+        } else if (isFading && !targetColor.operator==(newTargetColor)) {
+            // Target range changed mid-fade, update target and continue fading
+            targetColor = newTargetColor;
         }
     }
 
@@ -74,19 +80,49 @@ RGB TemperatureRangeColor::updateDisplayedColor() {
 }
 
 void TemperatureRangeColor::runBlockingFade(RGBLED* ledStrip) {
+    // Cancel any existing fade task first
+    if (fadeTaskRunning && fadeTaskHandle != nullptr) {
+        vTaskDelete(fadeTaskHandle);
+        fadeTaskHandle = nullptr;
+        fadeTaskRunning = false;
+    }
+
     if (!isFading) return;
 
+    // Capture current displayed color as start point (atomic copy)
+    fadeStartColor = displayedColor;
+
+    // Store pointer to LED strip for the task
+    ledStripPtr = ledStrip;
+    fadeTaskRunning = true;
+
+    // Create fade animation task on Core 0
+    // Main loop runs on Core 1, so this keeps animations smooth
+    xTaskCreatePinnedToCore(
+        fadeAnimationTask,      // Task function
+        "FadeAnimation",        // Task name
+        2048,                   // Stack size (bytes)
+        this,                   // Task parameter (pointer to this instance)
+        2,                      // Priority (higher = more important)
+        &fadeTaskHandle,        // Task handle
+        0                       // Pin to Core 0
+    );
+}
+
+void TemperatureRangeColor::fadeAnimationTask(void* parameter) {
+    TemperatureRangeColor* self = (TemperatureRangeColor*)parameter;
+
     unsigned long startTime = millis();
-    RGB startColor = displayedColor;
+    RGB startColor = self->fadeStartColor;  // Use captured start color
 
     while (true) {
         unsigned long elapsed = millis() - startTime;
-        float progress = (float)elapsed / FADE_DURATION_MS;
+        float progress = (float)elapsed / self->FADE_DURATION_MS;
 
         if (progress >= 1.0f) {
-            displayedColor = targetColor;
-            isFading = false;
-            ledStrip->setColor(targetColor);
+            self->displayedColor = self->targetColor;
+            self->isFading = false;
+            self->ledStripPtr->setColor(self->targetColor);
             break;
         }
 
@@ -95,12 +131,18 @@ void TemperatureRangeColor::runBlockingFade(RGBLED* ledStrip) {
             ? 2.0f * progress * progress
             : 1.0f - pow(-2.0f * progress + 2.0f, 2.0f) / 2.0f;
 
-        displayedColor = startColor.blend(targetColor, easedProgress);
-        ledStrip->setColor(displayedColor);
+        self->displayedColor = startColor.blend(self->targetColor, easedProgress);
+        self->ledStripPtr->setColor(self->displayedColor);
 
         // Small delay for smooth animation (~20ms = ~50 FPS)
-        delay(20);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
+
+    self->fadeTaskRunning = false;
+    self->fadeTaskHandle = nullptr;
+
+    // Delete this task
+    vTaskDelete(nullptr);
 }
 
 RGB TemperatureRangeColor::getCurrentColor() const {
