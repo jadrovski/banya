@@ -2270,7 +2270,7 @@ h1 {
     <script>
         let mockActive = true;
 
-        // Temperature ranges and colors (matching TemperatureRangeColor.cpp)
+        // Temperature ranges and colors (matching TemperatureLEDController.cpp)
         const colorRanges = [
             { max: 35, color: '#FF00FF', name: 'Magenta (0-35°C)' },
             { max: 55, color: '#0000FF', name: 'Blue (35-55°C)' },

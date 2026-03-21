@@ -12,7 +12,7 @@
 #include "pages/PageManager.h"
 #include "web/WebServer.h"
 #include "hal/Button.h"
-#include "color/TemperatureRangeColor.h"
+#include "led/TemperatureLEDController.h"
 
 // I2C конфигурация
 constexpr uint8_t I2C_SDA_PIN = 21;
@@ -74,18 +74,23 @@ WiFiSettings wifiSettings;
 WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
 WiFiManager wifi(wifiConfig);
 
-// Temperature-based LED color controller
-TemperatureRangeColor tempColor(25.0f);
-
 // Mock temperature sensor (for web testing)
 float mockTemperature = -1.0f; // -1 means disabled (use real sensor)
 
 // Serial temperature control
 bool serialTempControl = false;
 float serialTempValue = 25.0f;
-const float TEMP_STEP = 0.5f;
-const float TEMP_MIN = -10.0f;
-const float TEMP_MAX = 100.0f;
+constexpr float TEMP_STEP = 0.5f;
+constexpr float TEMP_MIN = -10.0f;
+constexpr float TEMP_MAX = 100.0f;
+
+// Temperature getter function (supports mock or real sensor)
+float getTemperatureForLED() {
+    return mockTemperature >= 0 ? mockTemperature : ds18b20.getTemperature(0);
+}
+
+// Temperature-based LED controller
+TemperatureLEDController tempLEDController(getTemperatureForLED, ledStrip);
 
 // OTA
 LCDOTAPresenter otaPresenter(&lcd);
@@ -392,6 +397,10 @@ void setupLEDStrip() {
     } else {
         Serial.println("FAILED");
     }
+
+    // Initialize temperature LED controller
+    tempLEDController.begin();
+    Serial.print("Initialized Temperature LED Controller.");
 }
 
 void setupWifi() {
@@ -542,24 +551,14 @@ void loop() {
     // Автоматическое обновление температур DS18B20
     ds18b20.handleLoop();
 
-    // Update LED strip color based on temperature (use first sensor or mock)
-    float temp = mockTemperature >= 0 ? mockTemperature : ds18b20.getTemperature(0);
+    // Update LED color based on temperature (non-blocking, Core 0 fade animation)
+    tempLEDController.handleLoop();
 
-    if (temp != DEVICE_DISCONNECTED_C) {
-        // Update temperature and get displayed color
-        if (!tempColor.isFadingActive()) {
-            tempColor.updateTemperature(temp);
-
-            // Write color to LED when not fading
-            ledStrip.setColor(tempColor.getDisplayedColor());
-
-            // Run fade animation on Core 0 when color changes
-            if (tempColor.isFadingActive()) {
-                tempColor.runBlockingFade(&ledStrip);
-            }
-        }
-    } else {
-        Serial.printf("Temperature sensor disconnected! Temp reading: %.1f\n", temp);
+    // Debug output
+    static unsigned long lastDebug = 0;
+    if (millis() - lastDebug > 5000) {
+        Serial.println(tempLEDController.getStatus());
+        lastDebug = millis();
     }
 
     // Обработка веб-клиентов
