@@ -5,6 +5,7 @@
 #include "../hal/WiFi.h"
 #include "../hal/RGBLED.h"
 #include "../hal/LCD.h"
+#include "../hal/SerialTempSensor.h"
 
 /**
  * @brief Конфигурация веб-сервера
@@ -56,7 +57,9 @@ private:
     WiFiManager *wifiManager;
     WiFiSettings *wifiSettings;
     LCD2004 *lcd;
+    SerialTempSensor *serialTempSensor;
     void *otaManager; // OTA manager pointer (void* to avoid circular dependency)
+    std::function<void(bool)> sensorSwitchCallback; // Callback to switch between mock/real sensor
     bool running;
 
 public:
@@ -69,6 +72,8 @@ public:
      * @param wifiSettingsPtr Указатель на WiFiSettings
      * @param display Указатель на LCD
      * @param otaMgr Указатель на OTAManager
+     * @param serialTemp Указатель на SerialTempSensor
+     * @param sensorSwitchCb Callback для переключения сенсора (true=mock, false=real)
      */
     BanyaWebServer(const WebServerConfig &cfg,
                    std::function<Status()> statusProv,
@@ -76,10 +81,14 @@ public:
                    WiFiManager *wifiMgr,
                    WiFiSettings *wifiSettingsPtr,
                    LCD2004 *display,
-                   void *otaMgr)
+                   void *otaMgr,
+                   SerialTempSensor *serialTemp = nullptr,
+                   std::function<void(bool)> sensorSwitchCb = nullptr)
         : config(cfg), server(nullptr), statusProvider(statusProv), ledStrip(led),
           wifiManager(wifiMgr), wifiSettings(wifiSettingsPtr), lcd(display),
+          serialTempSensor(serialTemp),
           otaManager(otaMgr),
+          sensorSwitchCallback(sensorSwitchCb),
           running(false) {
     }
 
@@ -513,18 +522,26 @@ private:
      * @brief Обработка установки эмуляции температуры
      */
     void handleTempMockSet() {
+        if (!serialTempSensor) {
+            server->send(500, "application/json", "{\"error\":\"No serial temperature sensor\"}");
+            return;
+        }
+
         if (server->hasArg("temperature")) {
             float temp = server->arg("temperature").toFloat();
             // Clamp temperature to reasonable range
             if (temp < -55.0f) temp = -55.0f;
             if (temp > 125.0f) temp = 125.0f;
-            
-            // Update mock temperature (external variable from main.cpp)
-            extern float mockTemperature;
-            mockTemperature = temp;
-            
+
+            serialTempSensor->setTemperature(temp);
+
+            // Switch to mock sensor if callback is available
+            if (sensorSwitchCallback) {
+                sensorSwitchCallback(true);  // true = use mock
+            }
+
             Serial.printf("Temp Mock: Set to %.1f°C\n", temp);
-            server->send(200, "application/json", 
+            server->send(200, "application/json",
                          "{\"success\":true,\"temperature\":" + String(temp, 1) + "}");
         } else {
             server->send(400, "application/json", "{\"error\":\"Missing temperature parameter\"}");
@@ -535,8 +552,16 @@ private:
      * @brief Обработка отключения эмуляции температуры
      */
     void handleTempMockDisable() {
-        extern float mockTemperature;
-        mockTemperature = -1.0f;
+        if (!serialTempSensor) {
+            server->send(500, "application/json", "{\"error\":\"No serial temperature sensor\"}");
+            return;
+        }
+
+        // Switch to real sensor if callback is available
+        if (sensorSwitchCallback) {
+            sensorSwitchCallback(false);  // false = use real
+        }
+
         Serial.println("Temp Mock: Disabled - using real sensor");
         server->send(200, "application/json", "{\"success\":true,\"message\":\"Using real sensor\"}");
     }

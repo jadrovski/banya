@@ -12,6 +12,8 @@
 #include "pages/PageManager.h"
 #include "web/WebServer.h"
 #include "hal/Button.h"
+#include "hal/SerialTempSensor.h"
+#include "hal/ITemperatureSensor.h"
 #include "led/TemperatureLEDController.h"
 
 // I2C конфигурация
@@ -74,19 +76,28 @@ WiFiSettings wifiSettings;
 WiFiConfig wifiConfig("", "", 15000, true); // Credentials будут загружены из NVS
 WiFiManager wifi(wifiConfig);
 
-// Mock temperature sensor (for web testing)
-float mockTemperature = -1.0f; // -1 means disabled (use real sensor)
+// Serial temperature sensor (mock temperature for testing)
+SerialTempSensor serialTemp(SerialTempSensorConfig(0.5f, -10.0f, 100.0f, 25.0f));
 
-// Serial temperature control
-bool serialTempControl = false;
-float serialTempValue = 25.0f;
-constexpr float TEMP_STEP = 0.5f;
-constexpr float TEMP_MIN = -10.0f;
-constexpr float TEMP_MAX = 100.0f;
+// Temperature sensor pointer - can switch between real and mock
+ITemperatureSensor* activeTempSensor = &ds18b20;  // Default to real sensor
 
-// Temperature getter function (supports mock or real sensor)
+// Temperature getter function (uses active sensor)
 float getTemperatureForLED() {
-    return mockTemperature >= 0 ? mockTemperature : ds18b20.getTemperature(0);
+    return activeTempSensor->getTemperature(0);
+}
+
+// Temperature sensor switch function (called from web interface)
+void switchTemperatureSensor(bool useMock) {
+    if (useMock) {
+        activeTempSensor = &serialTemp;
+        Serial.println("Temperature: Switched to MOCK sensor (via Web)");
+        Serial.println(serialTemp.getInfo());
+    } else {
+        activeTempSensor = &ds18b20;
+        Serial.println("Temperature: Switched to REAL sensor (via Web)");
+        Serial.println(ds18b20.getInfo());
+    }
 }
 
 // Temperature-based LED controller
@@ -99,7 +110,7 @@ OTAManager ota(OTAConfig("banya-controller", 3232, nullptr, false), &otaPresente
 // Forward declaration
 Status getStatus();
 
-BanyaWebServer webServer(WebServerConfig(), getStatus, &ledStrip, &wifi, &wifiSettings, &lcd, &ota);
+BanyaWebServer webServer(WebServerConfig(), getStatus, &ledStrip, &wifi, &wifiSettings, &lcd, &ota, &serialTemp, switchTemperatureSensor);
 
 // TouchSensor touch(TouchConfig(TOUCH_PIN, TOUCH_THRESHOLD_PERCENT, TOUCH_DEBOUNCE_MS, TOUCH_LONG_PRESS_MS,
 //                               TOUCH_VERY_LONG_PRESS_MS));
@@ -110,136 +121,6 @@ PageManager pageManager(lcd);
 
 // Индекс страницы WiFi Setup (используется в callback)
 uint8_t wifiSetupIdx = -1;
-
-/**
- * @brief Handle serial commands for temperature control
- * Commands:
- * - 'w' or 'W': Increase temperature
- * - 's' or 'S': Decrease temperature
- * - 'r' or 'R': Reset to real sensor (disable mock)
- * - 'm' or 'M': Enable mock temperature control
- * - '0'-'9': Set specific temperature
- */
-void handleSerialTempControl() {
-    if (Serial.available()) {
-        char cmd = Serial.read();
-        
-        switch (cmd) {
-            case 'w':
-            case 'W':
-            case '+':
-            case 'u':  // up
-            case 'U':
-                serialTempValue = min(serialTempValue + TEMP_STEP, TEMP_MAX);
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C (+)\n", serialTempValue);
-                break;
-                
-            case 's':
-            case 'S':
-            case '-':
-            case 'd':  // down
-            case 'D':
-                serialTempValue = max(serialTempValue - TEMP_STEP, TEMP_MIN);
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C (-)\n", serialTempValue);
-                break;
-                
-            case 'r':
-            case 'R':
-                mockTemperature = -1.0f;
-                serialTempControl = false;
-                Serial.println("Using real sensor");
-                break;
-                
-            case 'm':
-            case 'M':
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Mock temp enabled: %.1f°C\n", serialTempValue);
-                break;
-                
-            case '0':
-                serialTempValue = 0.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '1':
-                serialTempValue = 10.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '2':
-                serialTempValue = 20.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '3':
-                serialTempValue = 30.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '4':
-                serialTempValue = 40.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '5':
-                serialTempValue = 50.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '6':
-                serialTempValue = 60.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '7':
-                serialTempValue = 70.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '8':
-                serialTempValue = 80.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            case '9':
-                serialTempValue = 90.0f;
-                mockTemperature = serialTempValue;
-                serialTempControl = true;
-                Serial.printf("Temp: %.1f°C\n", serialTempValue);
-                break;
-            
-            case '?':
-            case 'h':
-            case 'H':
-                Serial.println("\n=== Temperature Control ===");
-                Serial.println("w/u/+ : Increase temperature (+0.5°C)");
-                Serial.println("s/d/- : Decrease temperature (-0.5°C)");
-                Serial.println("0-9   : Set temperature (0=0°C, 5=50°C, etc.)");
-                Serial.println("m     : Enable mock temperature");
-                Serial.println("r     : Use real sensor");
-                Serial.println("?/h   : Show this help");
-                Serial.println("=========================\n");
-                break;
-                
-            default:
-                break;
-        }
-    }
-}
 
 void displayWelcome() {
     lcd.setCursor(8, 1);
@@ -256,16 +137,16 @@ void displayWelcome() {
 Status getStatus() {
     Status status;
 
-    // Температуры (DS18B20 обновляется автоматически в loop())
-    status.temp1 = ds18b20.getTemperature(0);
-    status.temp2 = ds18b20.getTemperature(1);
+    // Температуры (используем активный сенсор)
+    status.temp1 = activeTempSensor->getTemperature(0);
+    status.temp2 = activeTempSensor->getTemperature(1);
     status.temp3 = bme.getTemperature();
     status.humidity = bme.getHumidity();
     status.pressure = bme.getPressure_mmHg(HPA_TO_MMHG);
 
     // Статус сенсоров
-    status.sensor1Connected = ds18b20.isConnected(0) && (status.temp1 != DEVICE_DISCONNECTED_C);
-    status.sensor2Connected = ds18b20.isConnected(1) && (status.temp2 != DEVICE_DISCONNECTED_C);
+    status.sensor1Connected = activeTempSensor->isConnected(0) && (status.temp1 != DEVICE_DISCONNECTED_C);
+    status.sensor2Connected = activeTempSensor->isConnected(1) && (status.temp2 != DEVICE_DISCONNECTED_C);
 
     // WiFi
     status.wifiIP = wifi.getIPAddressString();
@@ -403,6 +284,11 @@ void setupLEDStrip() {
     Serial.print("Initialized Temperature LED Controller.");
 }
 
+void setupSerialTemp() {
+    // Initialize serial temperature sensor
+    serialTemp.begin();
+}
+
 void setupWifi() {
     // Инициализация WiFi Settings (NVS)
     Serial.print("Initializing WiFi Settings (NVS)... ");
@@ -511,7 +397,7 @@ void setupPageManager() {
     // Создание страниц
     Serial.println("Creating display pages...");
 
-    pageManager.addPage(std::unique_ptr<DisplayPage>(new DallasSensorsPage(&ds18b20, "Dallas DS18B20")));
+    pageManager.addPage(std::unique_ptr<DisplayPage>(new DallasSensorsPage(&activeTempSensor, "Dallas DS18B20")));
     pageManager.addPage(std::unique_ptr<DisplayPage>(new BME280Page(&bme, "BME280 Sensor")));
     pageManager.addPage(std::unique_ptr<DisplayPage>(new LEDStripPage(&ledStrip, "LED Strip")));
     pageManager.addPage(std::unique_ptr<DisplayPage>(new WiFiInfoPage(&wifi, "WiFi Info")));
@@ -534,6 +420,7 @@ void setup() {
     setupBME280();
     setupDS18B20();
     setupLEDStrip();
+    setupSerialTemp();
     setupWifi();
     setupOTA();
     setupWebServer();
@@ -545,11 +432,27 @@ void setup() {
 IntervalTimer lcdConnectionTimer(5000); // 5 секунд
 
 void loop() {
-    // Handle serial temperature control commands
-    handleSerialTempControl();
-    
-    // Автоматическое обновление температур DS18B20
-    ds18b20.handleLoop();
+    // Process serial commands for mode switching (M/R) and temperature control
+    if (Serial.available()) {
+        char cmd = Serial.peek();
+        if (cmd == 'm' || cmd == 'M') {
+            Serial.read();
+            activeTempSensor = &serialTemp;
+            Serial.println("Temperature: Switched to MOCK sensor (Serial)");
+            Serial.println(serialTemp.getInfo());
+        } else if (cmd == 'r' || cmd == 'R') {
+            Serial.read();
+            activeTempSensor = &ds18b20;
+            Serial.println("Temperature: Switched to REAL sensor (DS18B20)");
+            Serial.println(ds18b20.getInfo());
+        } else {
+            // Pass other commands to serialTemp for temperature control
+            serialTemp.handleLoop();
+        }
+    }
+
+    // Автоматическое обновление температур (используем активный сенсор)
+    activeTempSensor->handleLoop();
 
     // Update LED color based on temperature (non-blocking, Core 0 fade animation)
     tempLEDController.handleLoop();

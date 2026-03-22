@@ -1,27 +1,31 @@
 #pragma once
 
 #include "../DisplayPage.h"
-#include "../../hal/DS18B20.h"
+#include "../../hal/ITemperatureSensor.h"
 
 /**
  * @brief Страница отображения температур DS18B20
  *
- * DS18B20Manager автоматически обновляет температуры в фоне.
+ * ITemperatureSensor автоматически обновляет температуры в фоне.
  * Страница только отображает текущие значения.
  */
 class DallasSensorsPage : public DisplayPage {
 private:
-    DS18B20Manager* dsManager;
+    ITemperatureSensor** tempSensorPtr;
     float lastTemp1;
     float lastTemp2;
     float lastTemp3;
     unsigned long lastUpdate;
     const unsigned long updateInterval;
 
+    ITemperatureSensor* getSensor() const {
+        return *tempSensorPtr;
+    }
+
 public:
-    DallasSensorsPage(DS18B20Manager* ds, const String& title = "Dallas Sensors", unsigned long interval = 1000)
+    DallasSensorsPage(ITemperatureSensor** sensor, const String& title = "Dallas Sensors", unsigned long interval = 1000)
         : DisplayPage(title, 0),
-          dsManager(ds),
+          tempSensorPtr(sensor),
           lastTemp1(-127),
           lastTemp2(-127),
           lastTemp3(-127),
@@ -37,7 +41,7 @@ public:
     }
 
     void render(LCD2004& lcd, bool force = false) override {
-        if (!dsManager) return;
+        if (!getSensor()) return;
 
         updateDisplay(lcd, force);
     }
@@ -50,14 +54,16 @@ private:
         if (!needUpdate) return;
         lastUpdate = now;
 
+        ITemperatureSensor* tempSensor = getSensor();
+
         // Заголовок
         lcd.line_printf(0, "%s", title.c_str());
         lcd.setCursor(lcd.getConfig().columns - 2, 0);
-        lcd.print(dsManager->getSensorCount());
+        lcd.print(tempSensor->getSensorCount());
 
         // Сенсор 1
-        float temp1 = dsManager->getTemperature(0);
-        if (dsManager->isConnected(0) && temp1 != DEVICE_DISCONNECTED_C) {
+        float temp1 = tempSensor->getTemperature(0);
+        if (tempSensor->isConnected(0) && temp1 != DEVICE_DISCONNECTED_C) {
             lcd.line_printf(1, "T1: %.1f C", temp1);
             lastTemp1 = temp1;
         } else {
@@ -65,8 +71,8 @@ private:
         }
 
         // Сенсор 2
-        float temp2 = dsManager->getTemperature(1);
-        if (dsManager->isConnected(1) && temp2 != DEVICE_DISCONNECTED_C) {
+        float temp2 = tempSensor->getTemperature(1);
+        if (tempSensor->isConnected(1) && temp2 != DEVICE_DISCONNECTED_C) {
             lcd.line_printf(2, "T2: %.1f", temp2);
             lastTemp2 = temp2;
         } else {
@@ -74,8 +80,8 @@ private:
         }
 
         // Сенсор 3
-        float temp3 = dsManager->getTemperature(2);
-        if (dsManager->isConnected(2) && temp3 != DEVICE_DISCONNECTED_C) {
+        float temp3 = tempSensor->getTemperature(2);
+        if (tempSensor->isConnected(2) && temp3 != DEVICE_DISCONNECTED_C) {
             lcd.line_printf(3, "T3: %.1f", temp3);
             lastTemp3 = temp3;
         } else {

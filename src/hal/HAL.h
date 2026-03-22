@@ -48,3 +48,5 @@
 #include "hal/WiFi.h"
 #include "hal/WiFiSettings.h"
 #include "hal/Touch.h"
+#include "hal/SerialTempSensor.h"
+#include "hal/ITemperatureSensor.h"

@@ -4,6 +4,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include "I2CDevice.h"
+#include "ITemperatureSensor.h"
 
 /**
  * @brief Конфигурация DS18B20
@@ -47,7 +48,7 @@ struct DS18B20SensorData {
  * - Разрешение 9-12 бит
  * - Асинхронное чтение температур
  */
-class DS18B20Manager {
+class DS18B20Manager : public ITemperatureSensor {
 private:
     DS18B20Config config;
     OneWire* oneWire;
@@ -85,7 +86,7 @@ public:
      * @brief Инициализация менеджера сенсоров
      * @return true если успешно
      */
-    bool begin() {
+    bool begin() override {
         oneWire = new OneWire(config.dataPin);
         sensors = new DallasTemperature(oneWire);
         sensors->begin();
@@ -178,7 +179,7 @@ public:
      * @param index Индекс сенсора (0-based)
      * @return Температура в °C или DEVICE_DISCONNECTED_C если ошибка
      */
-    float getTemperature(uint8_t index) {
+    float getTemperature(uint8_t index) override {
         if (index >= sensorCount) return DEVICE_DISCONNECTED_C;
         return sensorData[index].temperature;
     }
@@ -210,7 +211,7 @@ public:
      * @param index Индекс сенсора
      * @return true если сенсор подключен
      */
-    bool isConnected(uint8_t index) {
+    bool isConnected(uint8_t index) override {
         if (index >= sensorCount) return false;
         return sensorData[index].connected;
     }
@@ -218,7 +219,7 @@ public:
     /**
      * @brief Получить количество найденных сенсоров
      */
-    uint8_t getSensorCount() const { return sensorCount; }
+    uint8_t getSensorCount() const override { return sensorCount; }
 
     /**
      * @brief Получить данные сенсора
@@ -298,10 +299,31 @@ public:
     const DS18B20Config& getConfig() const { return config; }
 
     /**
+     * @brief Получить статус сенсора
+     * @return Строка статуса с информацией о всех сенсорах
+     */
+    String getStatus() const override {
+        String status = "DS18B20: ";
+        status += sensorCount;
+        status += " sensors [";
+        for (uint8_t i = 0; i < sensorCount; i++) {
+            if (i > 0) status += ", ";
+            if (sensorData[i].connected) {
+                status += String(sensorData[i].temperature, 1);
+                status += "°C";
+            } else {
+                status += "X";
+            }
+        }
+        status += "]";
+        return status;
+    }
+
+    /**
      * @brief Автоматическое обновление температур (вызывать в loop)
      * Менеджер сам запрашивает и обновляет температуры по таймеру
      */
-    void handleLoop() {
+    void handleLoop() override {
         if (!sensors || sensorCount == 0) return;
 
         unsigned long now = millis();
